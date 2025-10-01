@@ -18,10 +18,14 @@ pip install -r requirements.txt
 
 Vorlage:
 
-CLIENT_ID=d4740934-1c7c-4d35-ba18-eee83b8636ec 
-CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxx 
-AUTHORITY=https://login.microsoftonline.com/6dd5291a-610e-4172-a7b6-9a7dc57e9a2a 
-REDIRECT_PATH=/getAToken 
+CLIENT_ID=d4740934-1c7c-4d35-ba18-eee83b8636ec
+
+CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxx
+
+AUTHORITY=https://login.microsoftonline.com/6dd5291a-610e-4172-a7b6-9a7dc57e9a2a
+
+REDIRECT_PATH=/getAToken
+
 SCOPE=User.Read
 
 ### Start app
