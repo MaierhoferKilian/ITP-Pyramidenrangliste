@@ -1,0 +1,4 @@
+RK auf app.py -> Open in integrated Terminal -> + cmd
+
+Starten: python app.py
+Beenden: Strg + C

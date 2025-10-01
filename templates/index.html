@@ -1,0 +1,8 @@
+{% extends "template.html" %}
+
+{% block content %}
+    <h1>Willkommen zur Tischtennisrangliste</h1>
+    <div>Name: {{ user['graph_data']['displayName'] }}</div>
+    <div>Klasse: {{ user['graph_data']['jobTitle'] }}</div>
+    <div>E-Mail: {{ user['graph_data']['mail'] }}</div>
+{% endblock %}
