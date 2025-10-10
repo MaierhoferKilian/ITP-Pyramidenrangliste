@@ -1,8 +1,47 @@
-{% extends "template.html" %}
+{% extends "base.html" %}
 
 {% block content %}
-    <h1>Willkommen zur Tischtennisrangliste</h1>
-    <div>Name: {{ user['graph_data']['displayName'] }}</div>
-    <div>Klasse: {{ user['graph_data']['jobTitle'] }}</div>
-    <div>E-Mail: {{ user['graph_data']['mail'] }}</div>
+    <header>
+        <img src="{{ url_for('static', filename='images/htlwy_logo.svg') }}" alt="HTLWY Logo" width="100" height="100">
+        <h1>TISCHTENNIS RANGLISTE</h1>
+    </header>
+    <main>
+        <div class="pyramide">
+            <div class="ball">
+                <p>HERAUS FORDERN</p>
+                <img src="{{ url_for('static', filename='images/ball_star.svg') }}">
+            </div>
+            <div class="menu">
+                <img src="{{ url_for('static', filename='images/report.svg') }}">
+                <img src="{{ url_for('static', filename='images/user.svg') }}">
+                <img src="{{ url_for('static', filename='images/rules.svg') }}">
+            </div>
+        </div>
+        <div class="side-menu">
+            <div class="headline-container">
+                <h2>{{ user['graph_data']['displayName'] }}</h2>
+            </div>
+            <div class="table-container">
+                <div class="column1">
+                    <h4>GEWONNENE SPIELE</h4>
+                    <h3>3</h3>
+                    <h4>AKTUELLE PLATZIERUNG</h4>
+                    <h3>#6</h3>
+                    <h4>SIEGERQUOTE</h4>
+                    <h3>60%</h3>
+                </div>
+                <div class="column2">
+                    <h4>VERLORENE SPIELE</h4>
+                    <h3>2</h3>
+                    <h4>HÖCHSTE PLATZIERUNG</h4>
+                    <h3>#5</h3>
+                    <h4>INFORMATIONEN</h4>
+                    <div>
+                        <p>{{ user['graph_data']['jobTitle'] }}</p>
+                        <p>{{ user['graph_data']['mail'] }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 {% endblock %}

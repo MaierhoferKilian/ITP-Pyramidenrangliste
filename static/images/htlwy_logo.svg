@@ -1,0 +1,8 @@
+<svg width="1500" height="1500" viewBox="0 0 1500 1500" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="300" y="800" width="400" height="400" fill="#15509F"/>
+<rect x="800" y="800" width="700" height="700" fill="#97C81F"/>
+<rect x="800" width="700" height="700" fill="#E63233"/>
+<rect width="700" height="700" fill="#FFC801"/>
+<rect y="800" width="200" height="700" fill="#15509F"/>
+<rect x="700" y="1300" width="200" height="700" transform="rotate(90 700 1300)" fill="#15509F"/>
+</svg>
