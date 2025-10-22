@@ -161,6 +161,7 @@ def create_or_update_player(id_token_claims, graph_data):
             existing_player.firstname = firstname or existing_player.firstname
             existing_player.lastname = lastname or existing_player.lastname
             existing_player.active = True
+            existing_player.class_ = class_ or existing_player.class_
             print(f"Player {firstname} {lastname} aktualisiert")
         else:
             # Erstelle neuen Player
