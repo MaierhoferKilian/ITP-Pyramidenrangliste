@@ -16,6 +16,7 @@
                 <img src="{{ url_for('static', filename='images/user.svg') }}">
                 <img src="{{ url_for('static', filename='images/rules.svg') }}">
             </div>
+            <svg id="svg"></svg>
         </div>
         <div class="side-menu">
             <div class="headline-container">
@@ -44,4 +45,5 @@
             </div>
         </div>
     </main>
+    <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
 {% endblock %}
