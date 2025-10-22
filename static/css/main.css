@@ -194,3 +194,61 @@ main{
     width: auto;
     margin-bottom: calc(var(--space) / 2);
 }
+
+
+
+/*PINCH PAN ZOOM PYRAMID*/
+svg {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.pyr-rect {
+    cursor: pointer;
+    stroke-width: 4;
+    stroke: var(--fg-color);
+    fill: transparent;
+    opacity: 0.95;
+}
+.pyr-rect:hover {
+    stroke-width: 4;
+}
+.hover-indicator {
+    fill: var(--hl1-color);
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10;
+}
+.pyr-rect:hover ~ .hover-indicator:last-child {
+    opacity: 1;
+}
+.selected-indicator {
+    fill: var(--hl1-color);
+    pointer-events: none;
+    opacity: 0;
+}
+.selected-indicator.active {
+    opacity: 1;
+}
+.selected-indicator.active ~ .hover-indicator {
+    opacity: 1;
+}
+.special-indicator {
+    fill: var(--hl2-color);
+    pointer-events: none;
+    opacity: 0;
+}
+.special-indicator.active {
+    opacity: 1;
+}
+.parent-indicator {
+    fill: var(--hl3-color);
+    pointer-events: none;
+    opacity: 0;
+}
+.parent-indicator.active {
+    opacity: 1;
+}
