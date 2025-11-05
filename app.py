@@ -1,4 +1,4 @@
-from flask import Flask, render_template, url_for, session, redirect, request
+from flask import Flask, render_template, url_for, session, redirect, request, jsonify
 import msal, os, requests
 from app_config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_PATH, SCOPE, SESSION_TYPE
 from flask_sqlalchemy import SQLAlchemy
@@ -39,7 +39,7 @@ class Player(db.Model):
     email = db.Column(db.String(100), nullable=False)
     firstname = db.Column(db.String(100))
     lastname = db.Column(db.String(100))
-    class_ = db.Column('class', db.String(6))  # regex? (von API)
+    class_ = db.Column('class', db.String(6))
     current_rank = db.Column(db.Integer)
     highest_rank = db.Column(db.Integer)
     total_wins = db.Column(db.Integer)
@@ -141,7 +141,6 @@ def create_or_update_player(id_token_claims, graph_data):
         user_id = id_token_claims.get('oid') or id_token_claims.get('sub')
         
         if not user_id:
-            print("Keine eindeutige User-ID gefunden")
             return None
         
         # E-Mail-Adresse aus verschiedenen möglichen Feldern
@@ -150,7 +149,7 @@ def create_or_update_player(id_token_claims, graph_data):
         # Vorname und Nachname
         firstname = graph_data.get('givenName', '')
         lastname = graph_data.get('surname', '')
-        class_ = graph_data.get('jobTitle', '')  # Beispiel für Klasseninfo
+        class_ = graph_data.get('jobTitle', '')
         
         # Prüfe ob Player bereits existiert
         existing_player = Player.query.filter_by(uid=user_id).first()
@@ -162,7 +161,6 @@ def create_or_update_player(id_token_claims, graph_data):
             existing_player.lastname = lastname or existing_player.lastname
             existing_player.active = True
             existing_player.class_ = class_ or existing_player.class_
-            print(f"Player {firstname} {lastname} aktualisiert")
         else:
             # Erstelle neuen Player
             # Bestimme den nächsten Rang (letzter Platz + 1)
@@ -183,9 +181,7 @@ def create_or_update_player(id_token_claims, graph_data):
             )
             
             db.session.add(new_player)
-            print(f"Neuer Player erstellt: {firstname} {lastname} mit Rang {new_rank}")
         
-        # Speichere Änderungen in der Datenbank
         db.session.commit()
         return True
         
@@ -199,7 +195,35 @@ def create_or_update_player(id_token_claims, graph_data):
 def index():
     if not session.get("user"):
         return redirect(url_for("login"))
-    return render_template("index.html", user=session["user"])
+    
+    current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    total_players = Player.query.filter_by(active=True).count()
+    
+    return render_template("index.html", current_player=current_player, total_players=total_players)
+
+@app.route("/selected_player", methods=["POST"])
+def selected_player():
+    data = request.get_json()
+    position = data.get("position")
+
+    selected_player = Player.query.filter_by(current_rank=position).first()
+    if selected_player:
+        total_games = selected_player.total_wins + selected_player.total_losses
+        win_rate = round((selected_player.total_wins / total_games * 100), 2) if total_games > 0 else 0
+        
+        return jsonify({
+            "uid": selected_player.uid,
+            "firstname": selected_player.firstname,
+            "lastname": selected_player.lastname,
+            "class": selected_player.class_,
+            "email": selected_player.email,
+            "current_rank": selected_player.current_rank,
+            "highest_rank": selected_player.highest_rank,
+            "total_wins": selected_player.total_wins,
+            "total_losses": selected_player.total_losses,
+            "win_rate": win_rate
+        })
+    return jsonify({"error": "Player not found"}), 404
 
 @app.route("/login")
 def login():
@@ -224,7 +248,6 @@ def authorized():
         graph_data = get_user_graph_data(result["access_token"])
         id_token_claims["graph_data"] = graph_data
 
-        # Erstelle oder aktualisiere Player in der Datenbank
         create_or_update_player(id_token_claims, graph_data)
 
         session["user"] = id_token_claims
@@ -238,5 +261,5 @@ def authorized():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Erstellt die Tabellen in der Datenbank
+        db.create_all()
     app.run(debug=True)

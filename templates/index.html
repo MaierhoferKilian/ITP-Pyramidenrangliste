@@ -20,30 +20,34 @@
         </div>
         <div class="side-menu">
             <div class="headline-container">
-                <h2>{{ user['graph_data']['displayName'] }}</h2>
+                <h2 id="player-name">{{current_player.firstname}} {{current_player.lastname}}</h2>
             </div>
             <div class="table-container">
                 <div class="column1">
                     <h4>GEWONNENE SPIELE</h4>
-                    <h3>3</h3>
+                    <h3 id="total-wins">{{current_player.total_wins}}</h3>
                     <h4>AKTUELLE PLATZIERUNG</h4>
-                    <h3>#6</h3>
+                    <h3 id="current-rank">#{{current_player.current_rank}}</h3>
                     <h4>SIEGERQUOTE</h4>
-                    <h3>60%</h3>
+                    <h3 id="win-rate">{% if (current_player.total_wins + current_player.total_losses) > 0 %}{{(current_player.total_wins / (current_player.total_wins + current_player.total_losses) * 100) | round(2)}}%{% else %}0%{% endif %}</h3>
                 </div>
                 <div class="column2">
                     <h4>VERLORENE SPIELE</h4>
-                    <h3>2</h3>
+                    <h3 id="total-losses">{{current_player.total_losses}}</h3>
                     <h4>HÖCHSTE PLATZIERUNG</h4>
-                    <h3>#5</h3>
+                    <h3 id="highest-rank">#{{current_player.highest_rank}}</h3>
                     <h4>INFORMATIONEN</h4>
                     <div>
-                        <p>{{ user['graph_data']['jobTitle'] }}</p>
-                        <p>{{ user['graph_data']['mail'] }}</p>
+                        <p id="player-class">{{ current_player.class_ }}</p>
+                        <p id="player-email">{{ current_player.email }}</p>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+    <script>
+        const TOTAL_PLAYERS = {{ total_players }};
+        const CURRENT_USER_RANK = {{ current_player.current_rank }};
+    </script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
 {% endblock %}

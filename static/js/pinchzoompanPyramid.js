@@ -1,3 +1,7 @@
+function test(messgae){
+    console.log("Test message: " + messgae);
+}
+
 // Wait for DOM to be loaded
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -34,8 +38,9 @@ const container = svg.append("g");
 
 // Variables
 let selectedId = null;
-const TOTAL_RECTANGLES = 120; // Anzahl der Rechtecke - hier ändern!
-const SPECIAL_POSITION = 40; // Spezielle Position - hier ändern!
+// Use values passed from Flask (defined in index.html)
+const TOTAL_RECTANGLES = TOTAL_PLAYERS;
+const SPECIAL_POSITION = CURRENT_USER_RANK;
 
 // Function to update zoom and pan limits based on pyramid size
 function updateZoomAndPanLimits(totalRectangles) {
@@ -244,6 +249,43 @@ function selectCell(id, rectElement, globalPosition) {
   
   // Log selected position to console
   console.log(`Ausgewählte Position: ${globalPosition}`);
+  
+  // Fetch player data and update side menu
+  fetch("/selected_player", { 
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ position: globalPosition })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      console.error("Player not found");
+      return;
+    }
+    // Update side menu with player data
+    const playerName = document.getElementById("player-name");
+    const playerClass = document.getElementById("player-class");
+    const playerEmail = document.getElementById("player-email");
+    const totalWins = document.getElementById("total-wins");
+    const totalLosses = document.getElementById("total-losses");
+    const winRate = document.getElementById("win-rate");
+    const highestRank = document.getElementById("highest-rank");
+    const currentRank = document.getElementById("current-rank");
+    
+    if (playerName) playerName.textContent = `${data.firstname} ${data.lastname}`;
+    if (playerClass) playerClass.textContent = data.class || "-";
+    if (playerEmail) playerEmail.textContent = data.email || "-";
+    if (totalWins) totalWins.textContent = data.total_wins;
+    if (totalLosses) totalLosses.textContent = data.total_losses;
+    if (winRate) winRate.textContent = `${data.win_rate}%`;
+    if (highestRank) highestRank.textContent = `#${data.highest_rank}`;
+    if (currentRank) currentRank.textContent = `#${data.current_rank}`;
+  })
+  .catch(error => {
+    console.error("Error fetching player data:", error);
+  });
   
   // Automatically center on selected cell
   centerOnSelected();
