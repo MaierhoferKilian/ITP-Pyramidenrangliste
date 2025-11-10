@@ -14,11 +14,34 @@
             <div class="menu">
                 <img src="{{ url_for('static', filename='images/report.svg') }}">
                 <img src="{{ url_for('static', filename='images/user.svg') }}">
-                <img src="{{ url_for('static', filename='images/rules.svg') }}">
+                <img onclick="getRules()" src="{{ url_for('static', filename='images/rules.svg') }}">
             </div>
             <svg id="svg"></svg>
         </div>
-        <div class="side-menu">
+        <div id="sm-rules" style="display: none;" class="side-menu">
+            <div class="headline-container">
+                <h2>Offizielles Regelwerk</h2>
+            </div>
+            <div class="rules-container">
+                <h4>SPIELABLAUF</h4>
+                <p>Ein Spiel wird im Best-of-5 Modus ausgetragen. Das bedeutet, dass der erste Spieler, der 3 Sätze gewinnt, als Sieger hervorgeht.</p>
+                <h4>AUFSCHLAG</h4>
+                <p>Der Aufschlag erfolgt diagonal und muss im Aufschlagfeld des Gegners landen. Der Aufschläger muss hinter der Grundlinie stehen und den Ball mit einer Hand aufwerfen, bevor er ihn mit dem Schläger trifft.</p>
+                <h4>SPIELABLAUF</h4>
+                <p>Ein Spiel wird im Best-of-5 Modus ausgetragen. Das bedeutet, dass der erste Spieler, der 3 Sätze gewinnt, als Sieger hervorgeht.</p>
+                <h4>AUFSCHLAG</h4>
+                <p>Der Aufschlag erfolgt diagonal und muss im Aufschlagfeld des Gegners landen. Der Aufschläger muss hinter der Grundlinie stehen und den Ball mit einer Hand aufwerfen, bevor er ihn mit dem Schläger trifft.</p>
+                <h4>SPIELABLAUF</h4>
+                <p>Ein Spiel wird im Best-of-5 Modus ausgetragen. Das bedeutet, dass der erste Spieler, der 3 Sätze gewinnt, als Sieger hervorgeht.</p>
+                <h4>AUFSCHLAG</h4>
+                <p>Der Aufschlag erfolgt diagonal und muss im Aufschlagfeld des Gegners landen. Der Aufschläger muss hinter der Grundlinie stehen und den Ball mit einer Hand aufwerfen, bevor er ihn mit dem Schläger trifft.</p>
+                <h4>SPIELABLAUF</h4>
+                <p>Placeholder</p>
+
+            
+            </div>
+        </div>
+        <div id="sm-player" class="side-menu">
             <div class="headline-container">
                 <h2 id="player-name">{{current_player.firstname}} {{current_player.lastname}}</h2>
             </div>
@@ -50,4 +73,5 @@
         const CURRENT_USER_RANK = {{ current_player.current_rank }};
     </script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>
 {% endblock %}

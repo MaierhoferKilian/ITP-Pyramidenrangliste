@@ -102,6 +102,17 @@ main{
     justify-content: space-between;
     height: 100%;
 }
+.side-menu .rules-container{
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - (var(--space) * 2 + 2rem * 2));
+    margin: 0 var(--space);
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.side-menu .rules-container::-webkit-scrollbar{
+    display: none;
+}
 .side-menu .table-container .column1{
     width: 50%;
     border-right: 1px solid var(--bg-color);
@@ -130,6 +141,12 @@ main{
     max-width: 200px; /* Sie-Menu-Width beachten */
     text-align: center;
 }
+.side-menu .rules-container h4{
+    color: var(--bg-color);
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: calc(var(--space) / 2);
+}
 .side-menu .table-container .column2 > div{
     display: flex;
     flex-direction: column;
@@ -143,6 +160,12 @@ main{
     overflow: hidden;
     max-width: 200px; /* Sie-Menu-Width beachten */
     text-overflow: ellipsis;
+}
+.side-menu .rules-container p{
+    color: var(--bg-color);
+    font-size: 1rem;
+    font-weight: 300;
+    margin-bottom: var(--space);
 }
 .pyramide{
     background-image: url('../images/net.svg');
@@ -165,6 +188,17 @@ main{
     position: absolute;
     bottom: 0;
     right: calc(2 * var(--space) + 443.767px); /*Header h1 Width*/
+}
+@keyframes shake {
+    0%   { transform: rotate(0deg); }
+    25%  { transform: rotate(-5deg); }
+    50%  { transform: rotate(5deg); }
+    75%  { transform: rotate(-3deg); }
+    100% { transform: rotate(0deg); }
+}
+.pyramide .ball:hover{
+    animation: shake 0.5s;
+    cursor: pointer;
 }
 .pyramide .ball p{
     color: var(--fg-color);
@@ -193,6 +227,11 @@ main{
     height: 1.5rem;
     width: auto;
     margin-bottom: calc(var(--space) / 2);
+    transition: transform 0.2s ease;
+}
+.pyramide .menu img:hover{
+    cursor: pointer;
+    transform: scale(1.1);
 }
 
 
