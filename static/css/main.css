@@ -113,6 +113,16 @@ main{
 .side-menu .rules-container::-webkit-scrollbar{
     display: none;
 }
+.side-menu .bottom-fade{
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: calc(var(--space) * 2);
+    background: linear-gradient(to bottom, rgba(112, 111, 211, 0) 0%, var(--hl1-color) 100%);
+}
+.side-menu .rules-container .last{
+    margin-bottom: calc(var(--space) * 2);
+}
 .side-menu .table-container .column1{
     width: 50%;
     border-right: 1px solid var(--bg-color);
