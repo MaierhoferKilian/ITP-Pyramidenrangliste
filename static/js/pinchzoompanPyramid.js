@@ -28,6 +28,7 @@ svg.call(zoom);
 const container = svg.append("g");
 
 let selectedId = null;
+let selectedPlayerUid = null;
 
 const TOTAL_RECTANGLES = TOTAL_PLAYERS;
 const SPECIAL_POSITION = CURRENT_USER_RANK;
@@ -216,6 +217,9 @@ function selectCell(id, rectElement, globalPosition) {
       console.error("Player not found");
       return;
     }
+    // Store the selected player UID
+    selectedPlayerUid = data.uid;
+    
     // Update side menu with player data
     const playerName = document.getElementById("player-name");
     const playerClass = document.getElementById("player-class");
@@ -237,6 +241,16 @@ function selectCell(id, rectElement, globalPosition) {
     if (winRate) winRate.textContent = `${data.win_rate}%`;
     if (highestRank) highestRank.textContent = `#${data.highest_rank}`;
     if (currentRank) currentRank.textContent = `#${data.current_rank}`;
+    
+    // Show inactive button only if viewing current user's profile
+    const inactiveBtn = document.getElementById("set-inactive-btn");
+    if (inactiveBtn) {
+      if (data.current_rank === CURRENT_USER_RANK) {
+        inactiveBtn.style.display = "block";
+      } else {
+        inactiveBtn.style.display = "none";
+      }
+    }
   })
   .catch(error => {
     console.error("Error fetching player data:", error);
@@ -296,5 +310,39 @@ drawPyramid(TOTAL_RECTANGLES);
 setTimeout(() => {
   fitPyramidToView();
 }, 100);
+
+// Add event listener for set inactive button
+const setInactiveBtn = document.getElementById("set-inactive-btn");
+if (setInactiveBtn) {
+  setInactiveBtn.addEventListener("click", function() {
+    if (!selectedPlayerUid) {
+      alert("Kein Spieler ausgewählt");
+      return;
+    }
+    
+    if (confirm("Möchten Sie sich wirklich als inaktiv setzen? Sie werden nicht mehr in der Pyramide angezeigt.")) {
+      fetch("/set_player_inactive", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ uid: selectedPlayerUid })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert("Sie wurden erfolgreich als inaktiv gesetzt. Die Seite wird neu geladen.");
+          window.location.reload();
+        } else {
+          alert("Fehler: " + (data.error || "Unbekannter Fehler"));
+        }
+      })
+      .catch(error => {
+        console.error("Error setting player inactive:", error);
+        alert("Ein Fehler ist aufgetreten beim Deaktivieren des Spielers");
+      });
+    }
+  });
+}
 
 });

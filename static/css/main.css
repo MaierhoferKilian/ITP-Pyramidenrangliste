@@ -301,3 +301,26 @@ svg {
 .parent-indicator.active {
     opacity: 1;
 }
+
+.inactive-btn {
+    margin-top: var(--space);
+    padding: 12px 24px;
+    background-color: var(--hl2-color);
+    color: var(--bg-color);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.inactive-btn:hover {
+    background-color: #e04848;
+    transform: scale(1.05);
+}
+
+.inactive-btn:active {
+    transform: scale(0.95);
+}

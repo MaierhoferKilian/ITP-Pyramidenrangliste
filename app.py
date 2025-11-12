@@ -225,6 +225,29 @@ def selected_player():
         })
     return jsonify({"error": "Player not found"}), 404
 
+@app.route("/set_player_inactive", methods=["POST"])
+def set_player_inactive():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json()
+    uid = data.get("uid")
+    
+    if not uid:
+        return jsonify({"error": "Player UID required"}), 400
+    
+    player = Player.query.filter_by(uid=uid).first()
+    if not player:
+        return jsonify({"error": "Player not found"}), 404
+    
+    try:
+        player.active = False
+        db.session.commit()
+        return jsonify({"success": True, "message": "Player set to inactive"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to update player: {str(e)}"}), 500
+
 @app.route("/login")
 def login():
     auth_url = _build_auth_url()
