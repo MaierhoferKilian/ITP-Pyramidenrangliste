@@ -246,7 +246,8 @@ def set_player_inactive():
         return jsonify({"success": True, "message": "Player set to inactive"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Failed to update player: {str(e)}"}), 500
+        print(f"Error setting player inactive: {str(e)}")  # Log to server, not to user
+        return jsonify({"error": "Failed to update player status"}), 500
 
 @app.route("/login")
 def login():
