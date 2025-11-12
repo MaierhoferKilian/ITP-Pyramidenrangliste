@@ -177,6 +177,20 @@ main{
     font-weight: 300;
     margin-bottom: var(--space);
 }
+.side-menu .rules-container a{
+    color: var(--bg-color);
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: underline;
+    transition: color 0.3s ease;
+    
+    display: inline-block;
+    align-self: flex-start;
+}
+.side-menu .rules-container a:hover {
+    cursor: pointer;
+    color: var(--hl2-color);
+}
 .pyramide{
     background-image: url('../images/net.svg');
     height: calc(100vh - (var(--space) * 2 + 4px));
@@ -233,15 +247,20 @@ main{
     top: calc(var(--space) * 2 + 4px);
     right: calc(2 * var(--space) + 443.767px); /*Header h1 Width*/
 }
-.pyramide .menu img{
+.pyramide .menu svg{
     height: 1.5rem;
     width: auto;
     margin-bottom: calc(var(--space) / 2);
-    transition: transform 0.2s ease;
+
+    transition: stroke 0.3s ease;
+    stroke: var(--fg-color);
 }
-.pyramide .menu img:hover{
+.pyramide .menu svg:hover{
     cursor: pointer;
-    transform: scale(1.1);
+    stroke: var(--hl1-color);
+}
+.pyramide .menu svg.active{
+    stroke: var(--hl1-color);
 }
 .option-container{
     width: calc(100% - var(--space) * 2);

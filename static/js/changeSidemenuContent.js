@@ -1,31 +1,20 @@
-function getRules(){
-    if (document.getElementById("sm-rules").style.display==="block"){
-        document.getElementById("sm-rules").style.display="none";
-        document.getElementById("sm-player").style.display="block";
-        return;
-    }
-    else{
-        document.getElementById("sm-rules").style.display="block";
-        document.getElementById("sm-player").style.display="none";
-    }
-}
-
-function getPlayer(){
-
-}
-
 function getMenu(menuType){
     document.getElementById("sm-user").style.display="none";
     document.getElementById("sm-rules").style.display="none";
     document.getElementById("sm-player").style.display="none";
+    
+    document.getElementById("rules").classList.remove("active");
+    document.getElementById("user").classList.remove("active");
 
     if (menuType==="rules"){
         document.getElementById("sm-rules").style.display="block";
+        document.getElementById("rules").classList.add("active");
     }
     else if (menuType==="player"){
         document.getElementById("sm-player").style.display="block";
     }
     else if (menuType==="user"){
         document.getElementById("sm-user").style.display="block";
+        document.getElementById("user").classList.add("active");
     }
 }

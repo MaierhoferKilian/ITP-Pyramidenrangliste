@@ -12,9 +12,15 @@
                 <img src="{{ url_for('static', filename='images/ball_star.svg') }}">
             </div>
             <div class="menu">
-                <img src="{{ url_for('static', filename='images/report.svg') }}">
-                <img onclick="getMenu('user')" src="{{ url_for('static', filename='images/user.svg') }}">
-                <img onclick="getMenu('rules')" src="{{ url_for('static', filename='images/rules.svg') }}">
+                <svg id="report" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15.0001 2.3999V5.9999C15.0001 6.66264 15.5373 7.1999 16.2001 7.1999H19.8001M8.40008 17.9999V13.1999M12.0001 17.9999L12.0001 8.3999M15.6001 17.9999V13.1999M18.0001 4.1999C17.466 3.72204 16.9118 3.15528 16.5619 2.78718C16.3291 2.54224 16.0074 2.3999 15.6695 2.3999H6.5998C5.27432 2.3999 4.19981 3.47441 4.1998 4.79989L4.19971 19.1998C4.1997 20.5253 5.27421 21.5998 6.5997 21.5998L17.3997 21.5999C18.7252 21.5999 19.7997 20.5254 19.7998 19.2L19.8001 6.47773C19.8001 6.1709 19.683 5.87594 19.4701 5.65503C19.0763 5.24655 18.4187 4.57442 18.0001 4.1999Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <svg id="user" onclick="getMenu('user')" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.3995 21.5999L20.3998 18.0002C20.4 16.0119 18.7881 14.3999 16.7998 14.3999H7.2005C5.21244 14.3999 3.60073 16.0114 3.6005 17.9995L3.6001 21.5999M15.6001 5.9999C15.6001 7.98813 13.9883 9.5999 12.0001 9.5999C10.0119 9.5999 8.4001 7.98813 8.4001 5.9999C8.4001 4.01168 10.0119 2.3999 12.0001 2.3999C13.9883 2.3999 15.6001 4.01168 15.6001 5.9999Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <svg id="rules" onclick="getMenu('rules')" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.57133 2.3999V21.5999M17.4856 10.6285H12.6856M17.4856 6.51419H12.6856M5.14276 6.51419H2.3999M5.14276 10.6285H2.3999M5.14276 14.7428H2.3999M6.51419 21.5999H18.857C20.3719 21.5999 21.5999 20.3719 21.5999 18.857V5.14276C21.5999 3.62792 20.3719 2.3999 18.857 2.3999H6.51419C4.99935 2.3999 3.77133 3.62792 3.77133 5.14276V18.857C3.77133 20.3719 4.99935 21.5999 6.51419 21.5999Z" stroke-width="2" stroke-linecap="round"/>
+                </svg>
             </div>
             <svg id="svg"></svg>
         </div>
@@ -54,7 +60,7 @@
                 <p>Bei einer Netzberührung wird der Aufschlag wiederholt. Hierbei muss der Ball natürlich auf der gegenerischen Platte landen. Bei einem Netzroller während des Spiels wird normal weitergespielt.</p>
                 <h4>RÜCKSCHLAG</h4>
                 <p>Der Rückschlag muss direkt nach dem Aufkommen des Balls auf der eigenen Tischhälfte erfolgen, bevor der Ball ein zweites Mal aufkommt. Der Ball muss dabei die gegnerische Tischhälfte treffen.</p>
-                <p class="last"><a href="https://www.oettv.org/fileadmin/media/OETTV/Dokumente/Bestimmungen/OETTV-Handbuch.pdf">Offizielles Regelwerk</a></p>
+                <a class="last" href="https://www.oettv.org/fileadmin/media/OETTV/Dokumente/Bestimmungen/OETTV-Handbuch.pdf">Offizielles Regelwerk</a>
             </div>
             <div class="bottom-fade"></div>
         </div>
