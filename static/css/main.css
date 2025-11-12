@@ -243,6 +243,46 @@ main{
     cursor: pointer;
     transform: scale(1.1);
 }
+.option-container{
+    width: calc(100% - var(--space) * 2);
+    height: var(--space);
+    margin-left: var(--space);
+
+    margin-bottom: calc(var(--space) / 2);
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.user-button{
+    height: var(--space);
+    width: var(--space);
+    background: radial-gradient(circle at 50% 20%, #FF5252 20%, #D94646 100%);
+    border-radius: 50%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.user-button svg{
+    height: 24px;
+    width: 24px;
+    stroke: var(--bg-color);
+
+    transition: stroke 0.3s ease;
+}
+.user-button:hover{
+    cursor: pointer;
+    background: radial-gradient(circle at 50% 20%, #f7f1e3 20%, #d1ccc0 100%);
+}
+.user-button:hover svg{
+    stroke: var(--hl2-color);
+}
+.options-container h4{
+    color: var(--bg-color);
+    font-size: 1rem;
+    font-weight: 700;
+}
 
 
 

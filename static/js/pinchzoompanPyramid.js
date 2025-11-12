@@ -226,9 +226,6 @@ function selectCell(id, rectElement, globalPosition) {
     const highestRank = document.getElementById("highest-rank");
     const currentRank = document.getElementById("current-rank");
 
-    document.getElementById("sm-rules").style.display="none";
-    document.getElementById("sm-player").style.display="block";
-
     if (playerName) playerName.textContent = `${data.firstname} ${data.lastname}`;
     if (playerClass) playerClass.textContent = data.class || "-";
     if (playerEmail) playerEmail.textContent = data.email || "-";
@@ -237,6 +234,8 @@ function selectCell(id, rectElement, globalPosition) {
     if (winRate) winRate.textContent = `${data.win_rate}%`;
     if (highestRank) highestRank.textContent = `#${data.highest_rank}`;
     if (currentRank) currentRank.textContent = `#${data.current_rank}`;
+
+    getMenu("player");
   })
   .catch(error => {
     console.error("Error fetching player data:", error);
