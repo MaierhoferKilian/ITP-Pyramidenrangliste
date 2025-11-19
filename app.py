@@ -4,7 +4,7 @@ from app_config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_PATH, SCOPE
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import enum
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_object("app_config")
@@ -24,7 +24,7 @@ class StatusEnum(enum.Enum):
     completed = 'completed'
     expired = 'expired'
 
-# Enum für Benachrichtigungstypen
+# Enum für Benachrichtigungs-Typen
 class NotificationTypeEnum(enum.Enum):
     challenge = 'challenge'
     match_result = 'match_result'
@@ -44,7 +44,8 @@ class Player(db.Model):
     highest_rank = db.Column(db.Integer)
     total_wins = db.Column(db.Integer)
     total_losses = db.Column(db.Integer)
-    active = db.Column(db.Boolean)
+    last_active = db.Column(db.DateTime)
+    blocked_until = db.Column(db.DateTime)
     
     # Beziehungen zu anderen Tabellen
     challenges_sent = db.relationship('Challenge', foreign_keys='Challenge.FK_challenger_id', backref='challenger', lazy=True)
@@ -159,7 +160,7 @@ def create_or_update_player(id_token_claims, graph_data):
             existing_player.email = email or existing_player.email
             existing_player.firstname = firstname or existing_player.firstname
             existing_player.lastname = lastname or existing_player.lastname
-            existing_player.active = True
+            existing_player.last_active = datetime.utcnow()
             existing_player.class_ = class_ or existing_player.class_
         else:
             # Erstelle neuen Player
@@ -177,7 +178,8 @@ def create_or_update_player(id_token_claims, graph_data):
                 highest_rank=new_rank,
                 total_wins=0,
                 total_losses=0,
-                active=True
+                last_active=datetime.utcnow(),
+                blocked_until=None
             )
             
             db.session.add(new_player)
@@ -197,7 +199,7 @@ def index():
         return redirect(url_for("login"))
     
     current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
-    total_players = Player.query.filter_by(active=True).count()
+    total_players = Player.query.filter(Player.last_active.isnot(None)).count()
     
     return render_template("index.html", current_player=current_player, total_players=total_players)
 
@@ -229,6 +231,29 @@ def selected_player():
 def login():
     auth_url = _build_auth_url()
     return redirect(auth_url)
+
+@app.route("/leave_ranking", methods=["POST"])
+def leave_ranking():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    if current_player:
+        # Block user for 1 week
+        current_player.blocked_until = datetime.utcnow() + timedelta(weeks=1)
+        db.session.commit()
+        return jsonify({"success": True, "message": "You have been blocked for 1 week"})
+    
+    return jsonify({"error": "Player not found"}), 404
+
+@app.route("/logout")
+def logout():
+    # Clear the session
+    session.clear()
+    
+    # Redirect to Microsoft logout endpoint
+    logout_url = f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri=http://localhost:5000/login"
+    return redirect(logout_url)
 
 @app.route(REDIRECT_PATH)
 def authorized():
