@@ -4,7 +4,7 @@ from app_config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_PATH, SCOPE
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import enum
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_object("app_config")
@@ -24,7 +24,7 @@ class StatusEnum(enum.Enum):
     completed = 'completed'
     expired = 'expired'
 
-# Enum für Benachrichtigungstypen
+# Enum für Benachrichtigungs-Typen
 class NotificationTypeEnum(enum.Enum):
     challenge = 'challenge'
     match_result = 'match_result'
@@ -231,6 +231,29 @@ def selected_player():
 def login():
     auth_url = _build_auth_url()
     return redirect(auth_url)
+
+@app.route("/leave_ranking", methods=["POST"])
+def leave_ranking():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    if current_player:
+        # Block user for 1 week
+        current_player.blocked_until = datetime.utcnow() + timedelta(weeks=1)
+        db.session.commit()
+        return jsonify({"success": True, "message": "You have been blocked for 1 week"})
+    
+    return jsonify({"error": "Player not found"}), 404
+
+@app.route("/logout")
+def logout():
+    # Clear the session
+    session.clear()
+    
+    # Redirect to Microsoft logout endpoint
+    logout_url = f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri=http://localhost:5000/login"
+    return redirect(logout_url)
 
 @app.route(REDIRECT_PATH)
 def authorized():
