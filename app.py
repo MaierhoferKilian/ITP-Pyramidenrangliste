@@ -44,7 +44,8 @@ class Player(db.Model):
     highest_rank = db.Column(db.Integer)
     total_wins = db.Column(db.Integer)
     total_losses = db.Column(db.Integer)
-    active = db.Column(db.Boolean)
+    last_active = db.Column(db.DateTime)
+    blocked_until = db.Column(db.DateTime)
     
     # Beziehungen zu anderen Tabellen
     challenges_sent = db.relationship('Challenge', foreign_keys='Challenge.FK_challenger_id', backref='challenger', lazy=True)
@@ -159,7 +160,7 @@ def create_or_update_player(id_token_claims, graph_data):
             existing_player.email = email or existing_player.email
             existing_player.firstname = firstname or existing_player.firstname
             existing_player.lastname = lastname or existing_player.lastname
-            existing_player.active = True
+            existing_player.last_active = datetime.utcnow()
             existing_player.class_ = class_ or existing_player.class_
         else:
             # Erstelle neuen Player
@@ -177,7 +178,8 @@ def create_or_update_player(id_token_claims, graph_data):
                 highest_rank=new_rank,
                 total_wins=0,
                 total_losses=0,
-                active=True
+                last_active=datetime.utcnow(),
+                blocked_until=None
             )
             
             db.session.add(new_player)
@@ -197,7 +199,7 @@ def index():
         return redirect(url_for("login"))
     
     current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
-    total_players = Player.query.filter_by(active=True).count()
+    total_players = Player.query.filter(Player.last_active.isnot(None)).count()
     
     return render_template("index.html", current_player=current_player, total_players=total_players)
 
