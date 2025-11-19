@@ -7,7 +7,7 @@
     </header>
     <main>
         <div class="pyramide">
-            <div class="ball">
+            <div class="ball" style="display: none;">
                 <p>HERAUS FORDERN</p>
                 <img src="{{ url_for('static', filename='images/ball_star.svg') }}">
             </div>
@@ -94,6 +94,7 @@
     <script>
         const TOTAL_PLAYERS = {{ total_players }};
         const CURRENT_USER_RANK = {{ current_player.current_rank }};
+        const IS_NEW_PLAYER = {% if (current_player.total_wins + current_player.total_losses) == 0 %}true{% else %}false{% endif %};
     </script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>

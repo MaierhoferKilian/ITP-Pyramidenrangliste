@@ -31,6 +31,7 @@ let selectedId = null;
 
 const TOTAL_RECTANGLES = TOTAL_PLAYERS;
 const SPECIAL_POSITION = CURRENT_USER_RANK;
+let IS_CURRENT_USER_NEW = typeof IS_NEW_PLAYER !== 'undefined' ? IS_NEW_PLAYER : false;
 
 // Update zoom and pan limits based on pyramid size
 function updateZoomAndPanLimits(totalRectangles) {
@@ -63,6 +64,16 @@ function updateZoomAndPanLimits(totalRectangles) {
 // Display challengeable players
 function getParentPositions(position) {
   const parents = [];
+  
+  // If in top 6 positions (rows 1-3), can challenge all positions ahead
+  if (position <= 6) {
+    for (let i = 1; i < position; i++) {
+      parents.push(i);
+    }
+    return parents;
+  }
+  
+  // For positions beyond top 6, use the original logic
   let currentRow = 1;
   let positionStart = 1;
   
@@ -87,6 +98,27 @@ function getParentPositions(position) {
   }
   
   return parents;
+}
+
+// Challangeable?
+function isChallengeable(targetPosition) {
+  // Top 6 rule - use normal pyramid logic (all ahead)
+  if (SPECIAL_POSITION <= 6) {
+    const challengeablePositions = getParentPositions(SPECIAL_POSITION);
+    return challengeablePositions.includes(targetPosition);
+  }
+  
+  // Get normal challengeable positions (pyramid logic)
+  const challengeablePositions = getParentPositions(SPECIAL_POSITION);
+  
+  // If current user is new (0 games) and not in top 6, can ALSO challenge positions 7 to own position - 1
+  if (IS_CURRENT_USER_NEW) {
+    return challengeablePositions.includes(targetPosition) || 
+           (targetPosition > 6 && targetPosition < SPECIAL_POSITION);
+  }
+  
+  // Otherwise use normal logic only
+  return challengeablePositions.includes(targetPosition);
 }
 
 function drawPyramid(totalRectangles) {
@@ -179,16 +211,28 @@ function applySpecialIndicators() {
   container.selectAll(".parent-indicator").classed("active", false);
   
   if (SPECIAL_POSITION <= TOTAL_RECTANGLES) {
+    // Always show red indicator for own position
     container.select(`[data-id="cell-${SPECIAL_POSITION}"] .special-indicator`)
       .classed("active", true);
     
+    // Get normal pyramid challengeable positions
     const parentPositions = getParentPositions(SPECIAL_POSITION);
+    
+    // Highlight normal pyramid positions
     parentPositions.forEach(parentPos => {
       if (parentPos >= 1 && parentPos <= TOTAL_RECTANGLES) {
         container.select(`[data-id="cell-${parentPos}"] .parent-indicator`)
           .classed("active", true);
       }
     });
+    
+    // If current user is new and not in top 6, ALSO highlight positions 7 to own position - 1
+    if (IS_CURRENT_USER_NEW && SPECIAL_POSITION > 6) {
+      for (let i = 7; i < SPECIAL_POSITION; i++) {
+        container.select(`[data-id="cell-${i}"] .parent-indicator`)
+          .classed("active", true);
+      }
+    }
   }
 }
 
@@ -201,6 +245,20 @@ function selectCell(id, rectElement, globalPosition) {
   selectedId = id;
   d3.select(rectElement.parentNode).select(".selected-indicator")
     .classed("active", true);
+  
+  // Show/hide challenge button
+  const challengeButton = document.querySelector(".ball");
+  if (challengeButton) {
+    if (isChallengeable(globalPosition)) {
+      challengeButton.style.display = "flex";
+      challengeButton.style.animation = "none";
+      setTimeout(() => {
+        challengeButton.style.animation = "shake 0.5s";
+      }, 10);
+    } else {
+      challengeButton.style.display = "none";
+    }
+  }
   
   // Fetch player data and update side menu
   fetch("/selected_player", { 
