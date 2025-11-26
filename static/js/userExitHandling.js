@@ -25,3 +25,27 @@ function LeaveRanking() {
         });
     }
 }
+
+function JoinRanking() {
+    if (confirm('Möchten Sie der Rangliste beitreten?')) {
+        fetch('/join_ranking', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message + ' - Ihr Rang: ' + data.rank);
+                location.reload();
+            } else {
+                alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ein Fehler ist aufgetreten.');
+        });
+    }
+}

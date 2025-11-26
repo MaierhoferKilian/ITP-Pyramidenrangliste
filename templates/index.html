@@ -24,11 +24,21 @@
             </div>
             <svg id="svg"></svg>
         </div>
-        <div id="sm-user" style="display: none;" class="side-menu">
+        <div id="sm-user" style="display: block;" class="side-menu">
             <div class="headline-container">
                 <h2 id="user-name">{{current_player.firstname}} {{current_player.lastname}}</h2>
             </div>
             <div class="options-container">
+                {% if not current_player.in_ranking %}
+                <div class="option-container">
+                        <h4>RANGLISTE BEITRETEN</h4>
+                    <div onclick="JoinRanking()" class="user-button">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                </div>  
+                {%else %}
                 <div class="option-container">
                   <h4>RANGLISTE VERLASSEN</h4>  
                   <div onclick="LeaveRanking()" class="user-button">
@@ -37,6 +47,7 @@
                     </svg>
                   </div>
                 </div>
+                {% endif %}
                 <div class="option-container">
                   <h4>ABMELDEN</h4>  
                   <div onclick="Logout()" class="user-button">
@@ -64,7 +75,7 @@
             </div>
             <div class="bottom-fade"></div>
         </div>
-        <div id="sm-player" style="display: block;" class="side-menu">
+        <div id="sm-player" style="display: none;" class="side-menu">
             <div class="headline-container">
                 <h2 id="player-name">{{current_player.firstname}} {{current_player.lastname}}</h2>
             </div>
@@ -93,7 +104,7 @@
     </main>
     <script>
         const TOTAL_PLAYERS = {{ total_players }};
-        const CURRENT_USER_RANK = {{ current_player.current_rank }};
+        const CURRENT_USER_RANK = {% if current_player.in_ranking %}{{ current_player.current_rank }}{% else %}0{% endif %};
         const IS_NEW_PLAYER = {% if (current_player.total_wins + current_player.total_losses) == 0 %}true{% else %}false{% endif %};
     </script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
