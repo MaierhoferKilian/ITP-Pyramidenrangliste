@@ -60,7 +60,7 @@
                 <p>Bei einer Netzberührung wird der Aufschlag wiederholt. Hierbei muss der Ball natürlich auf der gegenerischen Platte landen. Bei einem Netzroller während des Spiels wird normal weitergespielt.</p>
                 <h4>RÜCKSCHLAG</h4>
                 <p>Der Rückschlag muss direkt nach dem Aufkommen des Balls auf der eigenen Tischhälfte erfolgen, bevor der Ball ein zweites Mal aufkommt. Der Ball muss dabei die gegnerische Tischhälfte treffen.</p>
-                <a class="last" href="https://www.oettv.org/fileadmin/media/OETTV/Dokumente/Bestimmungen/OETTV-Handbuch.pdf">Offizielles Regelwerk</a>
+                <a target="_blank" class="last" href="https://www.oettv.org/fileadmin/media/OETTV/Dokumente/Bestimmungen/OETTV-Handbuch.pdf">Offizielles Regelwerk</a>
             </div>
             <div class="bottom-fade"></div>
         </div>
@@ -92,7 +92,7 @@
         </div>
     </main>
     <script>
-        const TOTAL_PLAYERS = {{ total_players }};
+        const TOTAL_PLAYERS ={{ total_players }};
         const CURRENT_USER_RANK = {{ current_player.current_rank }};
         const IS_NEW_PLAYER = {% if (current_player.total_wins + current_player.total_losses) == 0 %}true{% else %}false{% endif %};
     </script>
