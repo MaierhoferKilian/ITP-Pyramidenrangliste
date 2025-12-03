@@ -4,7 +4,7 @@ from app_config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_PATH, SCOPE
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import enum
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_object("app_config")
@@ -24,7 +24,7 @@ class StatusEnum(enum.Enum):
     completed = 'completed'
     expired = 'expired'
 
-# Enum für Benachrichtigungstypen
+# Enum für Benachrichtigungs-Typen
 class NotificationTypeEnum(enum.Enum):
     challenge = 'challenge'
     match_result = 'match_result'
@@ -35,16 +35,18 @@ class NotificationTypeEnum(enum.Enum):
 class Player(db.Model):
     __tablename__ = 't_player'
     
-    uid = db.Column(db.String(100), primary_key=True)  # eindeutig, unveränderlich, PK
+    uid = db.Column(db.String(100), primary_key=True)
     email = db.Column(db.String(100), nullable=False)
     firstname = db.Column(db.String(100))
     lastname = db.Column(db.String(100))
     class_ = db.Column('class', db.String(6))
-    current_rank = db.Column(db.Integer)
-    highest_rank = db.Column(db.Integer)
-    total_wins = db.Column(db.Integer)
-    total_losses = db.Column(db.Integer)
-    active = db.Column(db.Boolean)
+    current_rank = db.Column(db.Integer, nullable=True)
+    highest_rank = db.Column(db.Integer, nullable=True)
+    total_wins = db.Column(db.Integer, default=0)
+    total_losses = db.Column(db.Integer, default=0)
+    last_active = db.Column(db.DateTime)
+    blocked_until = db.Column(db.DateTime)
+    in_ranking = db.Column(db.Boolean, default=False)
     
     # Beziehungen zu anderen Tabellen
     challenges_sent = db.relationship('Challenge', foreign_keys='Challenge.FK_challenger_id', backref='challenger', lazy=True)
@@ -159,25 +161,23 @@ def create_or_update_player(id_token_claims, graph_data):
             existing_player.email = email or existing_player.email
             existing_player.firstname = firstname or existing_player.firstname
             existing_player.lastname = lastname or existing_player.lastname
-            existing_player.active = True
+            existing_player.last_active = datetime.utcnow()
             existing_player.class_ = class_ or existing_player.class_
         else:
-            # Erstelle neuen Player
-            # Bestimme den nächsten Rang (letzter Platz + 1)
-            last_rank = db.session.query(db.func.max(Player.current_rank)).scalar() or 0
-            new_rank = last_rank + 1
-            
+            # Erstelle neuen Player ohne Rang
             new_player = Player(
                 uid=user_id,
                 email=email,
                 firstname=firstname,
                 lastname=lastname,
                 class_=class_,
-                current_rank=new_rank,
-                highest_rank=new_rank,
+                current_rank=None,
+                highest_rank=None,
                 total_wins=0,
                 total_losses=0,
-                active=True
+                last_active=datetime.utcnow(),
+                blocked_until=None,
+                in_ranking=False
             )
             
             db.session.add(new_player)
@@ -190,14 +190,56 @@ def create_or_update_player(id_token_claims, graph_data):
         db.session.rollback()
         return False
 
+def cleanup_inactive_players():
+    """Remove players inactive for more than 3 weeks and adjust rankings"""
+    try:
+        three_weeks_ago = datetime.utcnow() - timedelta(weeks=3)
+        
+        # Find all players inactive for more than 3 weeks who are in the ranking
+        inactive_players = Player.query.filter(
+            Player.last_active < three_weeks_ago,
+            Player.in_ranking == True
+        ).order_by(Player.current_rank).all()
+        
+        if not inactive_players:
+            return
+        
+        # Delete inactive players and collect their ranks
+        deleted_ranks = []
+        for player in inactive_players:
+            deleted_ranks.append(player.current_rank)
+            db.session.delete(player)
+        
+        db.session.flush()
+        
+        # Adjust rankings for remaining players
+        deleted_ranks.sort()
+        for deleted_rank in deleted_ranks:
+            players_to_update = Player.query.filter(
+                Player.current_rank > deleted_rank
+            ).all()
+            
+            for player in players_to_update:
+                player.current_rank -= 1
+        
+        db.session.commit()
+        print(f"Cleaned up {len(inactive_players)} inactive players")
+        
+    except Exception as e:
+        print(f"Error cleaning up inactive players: {str(e)}")
+        db.session.rollback()
+
 # Routes
 @app.route("/")
 def index():
     if not session.get("user"):
         return redirect(url_for("login"))
     
+    # Clean up inactive players before displaying rankings
+    cleanup_inactive_players()
+    
     current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
-    total_players = Player.query.filter_by(active=True).count()
+    total_players = Player.query.filter(Player.in_ranking == True).count()
     
     return render_template("index.html", current_player=current_player, total_players=total_players)
 
@@ -229,6 +271,78 @@ def selected_player():
 def login():
     auth_url = _build_auth_url()
     return redirect(auth_url)
+
+@app.route("/join_ranking", methods=["POST"])
+def join_ranking():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    if not current_player:
+        return jsonify({"error": "Player not found"}), 404
+    
+    if current_player.in_ranking:
+        return jsonify({"error": "Already in ranking"}), 400
+    
+    # Check if player is blocked
+    if current_player.blocked_until and current_player.blocked_until > datetime.utcnow():
+        return jsonify({"error": "You are blocked until " + current_player.blocked_until.strftime("%Y-%m-%d %H:%M")}), 403
+    
+    # Add player to ranking at the last position
+    last_rank = db.session.query(db.func.max(Player.current_rank)).filter(Player.in_ranking == True).scalar() or 0
+    new_rank = last_rank + 1
+    
+    current_player.current_rank = new_rank
+    current_player.highest_rank = new_rank
+    current_player.in_ranking = True
+    current_player.blocked_until = None
+    
+    db.session.commit()
+    return jsonify({"success": True, "message": "Successfully joined the ranking", "rank": new_rank})
+
+@app.route("/leave_ranking", methods=["POST"])
+def leave_ranking():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    if current_player:
+        if not current_player.in_ranking:
+            return jsonify({"error": "Not in ranking"}), 400
+        
+        # Get the rank before removing
+        leaving_rank = current_player.current_rank
+        
+        # Remove from ranking
+        current_player.current_rank = None
+        current_player.in_ranking = False
+        # Block user for 1 week
+        current_player.blocked_until = datetime.utcnow() + timedelta(weeks=1)
+        
+        db.session.flush()
+        
+        # Move all players below up by one
+        players_to_update = Player.query.filter(
+            Player.current_rank > leaving_rank,
+            Player.in_ranking == True
+        ).all()
+        
+        for player in players_to_update:
+            player.current_rank -= 1
+        
+        db.session.commit()
+        return jsonify({"success": True, "message": "You have left the ranking and are blocked for 1 week"})
+    
+    return jsonify({"error": "Player not found"}), 404
+
+@app.route("/logout")
+def logout():
+    # Clear the session
+    session.clear()
+    
+    # Redirect to Microsoft logout endpoint
+    logout_url = f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri=http://localhost:5000/login"
+    return redirect(logout_url)
 
 @app.route(REDIRECT_PATH)
 def authorized():
@@ -262,4 +376,20 @@ def authorized():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # Update existing players to have in_ranking = True if they have a rank
+        try:
+            players_with_rank = Player.query.filter(
+                Player.current_rank.isnot(None)
+            ).all()
+            
+            for player in players_with_rank:
+                player.in_ranking = True
+            
+            db.session.commit()
+            print("Database initialized successfully")
+        except Exception as e:
+            print(f"Note: {str(e)}")
+            db.session.rollback()
+            
     app.run(debug=True)
