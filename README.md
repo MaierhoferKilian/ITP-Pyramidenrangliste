@@ -11,6 +11,7 @@ git clone https://github.com/MaierhoferKilian/ITP-Pyramidenrangliste.git
 
 ### Create Virtual Environment
 python -m venv venv
+
 venv\Scripts\activate
 
 ### Install Requirements
