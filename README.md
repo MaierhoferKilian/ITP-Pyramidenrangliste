@@ -33,7 +33,9 @@ SCOPE=User.Read
 
 ### Init database
 flask db init
+
 flask db migrate -m "Initial migration"
+
 flask db upgrade
 
 ### Start app
