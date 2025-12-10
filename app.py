@@ -156,12 +156,17 @@ def create_or_update_player(id_token_claims, graph_data):
         # Prüfe ob Player bereits existiert
         existing_player = Player.query.filter_by(uid=user_id).first()
         
+        # Only update last_active if not in vacation period
+        current_date = datetime.utcnow()
+        should_update_last_active = not is_vacation_period(current_date.date())
+        
         if existing_player:
             # Aktualisiere bestehenden Player
             existing_player.email = email or existing_player.email
             existing_player.firstname = firstname or existing_player.firstname
             existing_player.lastname = lastname or existing_player.lastname
-            existing_player.last_active = datetime.utcnow()
+            if should_update_last_active:
+                existing_player.last_active = current_date
             existing_player.class_ = class_ or existing_player.class_
         else:
             # Erstelle neuen Player ohne Rang
@@ -175,7 +180,7 @@ def create_or_update_player(id_token_claims, graph_data):
                 highest_rank=None,
                 total_wins=0,
                 total_losses=0,
-                last_active=datetime.utcnow(),
+                last_active=current_date if should_update_last_active else None,
                 blocked_until=None,
                 in_ranking=False
             )
@@ -193,16 +198,39 @@ def create_or_update_player(id_token_claims, graph_data):
 def cleanup_inactive_players():
     """Remove players inactive for more than 3 weeks and adjust rankings"""
     try:
+        # Don't run cleanup during vacation periods
+        if is_vacation_period(datetime.utcnow().date()):
+            print("Cleanup skipped: Currently in vacation period")
+            return
+        
         three_weeks_ago = datetime.utcnow() - timedelta(weeks=3)
         
         # Find all players inactive for more than 3 weeks who are in the ranking
-        inactive_players = Player.query.filter(
-            Player.last_active < three_weeks_ago,
-            Player.in_ranking == True
-        ).order_by(Player.current_rank).all()
+        # We need to calculate effective inactivity, excluding vacation periods
+        inactive_players = []
+        all_active_players = Player.query.filter(Player.in_ranking == True).all()
+        
+        for player in all_active_players:
+            if player.last_active:
+                # Calculate days inactive, excluding vacation days
+                days_inactive = 0
+                check_date = player.last_active.date()
+                today = datetime.utcnow().date()
+                
+                while check_date < today:
+                    check_date += timedelta(days=1)
+                    if not is_vacation_period(check_date):
+                        days_inactive += 1
+                
+                # 3 weeks = 21 days
+                if days_inactive > 21:
+                    inactive_players.append(player)
         
         if not inactive_players:
             return
+        
+        # Sort by rank for proper adjustment
+        inactive_players.sort(key=lambda p: p.current_rank)
         
         # Delete inactive players and collect their ranks
         deleted_ranks = []
@@ -228,6 +256,33 @@ def cleanup_inactive_players():
     except Exception as e:
         print(f"Error cleaning up inactive players: {str(e)}")
         db.session.rollback()
+
+def is_vacation_period(date):
+    """Check if a date falls within vacation periods (July, August, Dec 24 - Jan 6)"""
+    month = date.month
+    day = date.day
+    
+    # Summer vacation: July and August
+    if month in [7, 8]:
+        return True
+    
+    # Winter holidays: December 24 to January 6
+    if (month == 12 and day >= 10) or (month == 1 and day <= 6):
+        return True
+    
+    return False
+
+def get_next_available_date(start_date):
+    """Get the next available date that's not in a vacation period"""
+    current_date = start_date
+    max_attempts = 365  # Prevent infinite loop
+    attempts = 0
+    
+    while is_vacation_period(current_date) and attempts < max_attempts:
+        current_date += timedelta(days=1)
+        attempts += 1
+    
+    return current_date
 
 # Routes
 @app.route("/")
@@ -286,7 +341,16 @@ def join_ranking():
     
     # Check if player is blocked
     if current_player.blocked_until and current_player.blocked_until > datetime.utcnow():
-        return jsonify({"error": "You are blocked until " + current_player.blocked_until.strftime("%Y-%m-%d %H:%M")}), 403
+        blocked_until_str = current_player.blocked_until.strftime("%d.%m.%Y %H:%M")
+        return jsonify({"error": f"You are blocked until {blocked_until_str}"}), 403
+    
+    # Check if currently in vacation period
+    today = datetime.utcnow().date()
+    if is_vacation_period(today):
+        next_available = get_next_available_date(today)
+        return jsonify({
+            "error": f"Cannot join during vacation period. Please try again after {next_available.strftime('%d.%m.%Y')}"
+        }), 403
     
     # Add player to ranking at the last position
     last_rank = db.session.query(db.func.max(Player.current_rank)).filter(Player.in_ranking == True).scalar() or 0
