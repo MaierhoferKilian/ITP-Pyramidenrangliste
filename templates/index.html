@@ -157,6 +157,12 @@
             <div class="headline-container">
                 <h2 id="player-name">{{current_player.firstname}} {{current_player.lastname}}</h2>
             </div>
+            <div id="vacation-warning-sidemenu" style="display: none" class="rules-container">
+                <h4>⚠️ FERIENZEIT</h4>
+                <p>Vom 1. Juli bis 31. August und vom 24. Dezember bis 6. Januar können keine Spiele ausgetragen werden.</p>
+                <p>Während dieser Zeit wird Ihre Aktivität nicht gezählt und Sie können nicht aus der Rangliste entfernt werden.</p>
+                <p id="next-available-date-sidemenu" style="font-weight: 700;"></p>
+            </div>
             <div class="table-container">
                 <div class="column1">
                     <h4>GEWONNENE SPIELE</h4>
@@ -305,4 +311,5 @@
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>
     <script src="{{ url_for('static', filename='js/userExitHandling.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/vacationCheck.js') }}"></script>
 {% endblock %}

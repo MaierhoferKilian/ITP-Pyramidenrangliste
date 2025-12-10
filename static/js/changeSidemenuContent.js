@@ -7,6 +7,11 @@ function getMenu(menuType){
     document.getElementById("rules").classList.remove("active");
     document.getElementById("user").classList.remove("active");
 
+    const vacationContainer = document.getElementById('vacation-warning-sidemenu');
+    if (vacationContainer) {
+        vacationContainer.style.display = 'none';
+    }
+
     if (menuType==="rules"){
         document.getElementById("sm-rules").style.display="block";
         document.getElementById("rules").classList.add("active");
