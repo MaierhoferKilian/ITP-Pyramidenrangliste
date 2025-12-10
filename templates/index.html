@@ -7,8 +7,8 @@
     </header>
     <main>
         <div class="pyramide">
-            <div class="ball" style="display: none;">
-                <p>HERAUS FORDERN</p>
+            <div onclick="challengePlayer()" class="ball" style="display: none;">
+                <p id="challenge-button-text">HERAUS FORDERN</p>
                 <img src="{{ url_for('static', filename='images/ball_star.svg') }}">
             </div>
             <div class="menu">
@@ -20,6 +20,9 @@
                 </svg>
                 <svg id="rules" onclick="getMenu('rules')" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M8.57133 2.3999V21.5999M17.4856 10.6285H12.6856M17.4856 6.51419H12.6856M5.14276 6.51419H2.3999M5.14276 10.6285H2.3999M5.14276 14.7428H2.3999M6.51419 21.5999H18.857C20.3719 21.5999 21.5999 20.3719 21.5999 18.857V5.14276C21.5999 3.62792 20.3719 2.3999 18.857 2.3999H6.51419C4.99935 2.3999 3.77133 3.62792 3.77133 5.14276V18.857C3.77133 20.3719 4.99935 21.5999 6.51419 21.5999Z" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <svg id="challenges" onclick="getMenu('challenges')" style="display: none;" width="24" height="24" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5.8C12 6.35228 12.4477 6.8 13 6.8C13.5523 6.8 14 6.35228 14 5.8H13H12ZM14 1C14 0.447715 13.5523 0 13 0C12.4477 0 12 0.447715 12 1H13H14ZM12 25C12 25.5523 12.4477 26 13 26C13.5523 26 14 25.5523 14 25H13H12ZM14 20.2C14 19.6477 13.5523 19.2 13 19.2C12.4477 19.2 12 19.6477 12 20.2H13H14ZM20.2 12C19.6477 12 19.2 12.4477 19.2 13C19.2 13.5523 19.6477 14 20.2 14V13V12ZM25 14C25.5523 14 26 13.5523 26 13C26 12.4477 25.5523 12 25 12V13V14ZM1 12C0.447715 12 0 12.4477 0 13C0 13.5523 0.447715 14 1 14V13V12ZM5.8 14C6.35228 14 6.8 13.5523 6.8 13C6.8 12.4477 6.35228 12 5.8 12V13V14ZM22.6 12.9999H21.6C21.6 17.7496 17.7496 21.5999 13 21.5999V22.5999V23.5999C18.8542 23.5999 23.6 18.8541 23.6 12.9999H22.6ZM13 22.5999V21.5999C8.25035 21.5999 4.4 17.7496 4.4 12.9999H3.4H2.4C2.4 18.8541 7.14578 23.5999 13 23.5999V22.5999ZM3.4 12.9999H4.4C4.4 8.25028 8.25035 4.39993 13 4.39993V3.39993V2.39993C7.14578 2.39993 2.4 7.14571 2.4 12.9999H3.4ZM13 3.39993V4.39993C17.7496 4.39993 21.6 8.25028 21.6 12.9999H22.6H23.6C23.6 7.14571 18.8542 2.39993 13 2.39993V3.39993ZM13 5.8H14V1H13H12V5.8H13ZM13 25H14V20.2H13H12V25H13ZM20.2 13V14H25V13V12H20.2V13ZM1 13V14H5.8V13V12H1V13ZM16.6 13H15.6C15.6 14.4359 14.4359 15.6 13 15.6V16.6V17.6C15.5405 17.6 17.6 15.5405 17.6 13H16.6ZM13 16.6V15.6C11.5641 15.6 10.4 14.4359 10.4 13H9.4H8.4C8.4 15.5405 10.4595 17.6 13 17.6V16.6ZM9.4 13H10.4C10.4 11.5641 11.5641 10.4 13 10.4V9.4V8.4C10.4595 8.4 8.4 10.4595 8.4 13H9.4ZM13 9.4V10.4C14.4359 10.4 15.6 11.5641 15.6 13H16.6H17.6C17.6 10.4595 15.5405 8.4 13 8.4V9.4Z" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
             <svg id="svg"></svg>
@@ -57,6 +60,81 @@
                   </div>
                 </div>
             </div>
+        </div>
+        <div id="sm-challenge" style="display: none;" class="side-menu">
+            <div class="headline-container">
+                <h2>Spieler Herausfordern</h2>
+            </div>
+            <div class="challenge-container">
+                <div class="challenge-headline-container">
+                    <div class="challenge-headline">
+                        <h4>HERAUSFORDERER</h4>
+                        <img src="{{ url_for('static', filename='images/challenger.svg') }}" alt="Challenger Image">
+                    </div>
+                    <p>{{current_player.firstname}} {{current_player.lastname}}</p>
+                </div>
+                <div class="challenge-headline-container">
+                    <div class="challenge-headline">
+                        <h4>HERAUSGEFORDERTER</h4>
+                        <img src="{{ url_for('static', filename='images/challenged.svg') }}" alt="Challenged Image">
+                    </div>
+                    <p id="challenged-player-name">xxx</p>
+                </div>
+                <div id="margin-top" class="challenge-headline-container">
+                    <div class="challenge-headline">
+                        <h4>SPIELZEITPUNKT</h4>
+                        <img onclick="document.getElementById('match-date-picker').showPicker()" style="cursor: pointer;" src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Calendar Image">
+                    </div>
+                    <p id="match-date-display">Datum wählen</p>
+                    <input type="date" id="match-date-picker" style="display: none;" onchange="updateMatchDate(this.value)">
+                    <div class="approve-container">
+                        <div class="approve-container-one">
+                            <div class="approve-container-two">
+                                <img src="{{ url_for('static', filename='images/challenger.svg') }}" alt="Challenger Image">
+                                <p id="challenger-status" class="challenge-status">Offen</p>
+                            </div>
+                            <div id="challenger-button" onclick="toggleChallengerStatus()" class="user-button">
+                                <svg id="challenger-icon-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <svg id="challenger-icon-x" style="display: none;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 8L8 16M16 16L8 8" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="approve-container-one">
+                            <div class="approve-container-two">
+                                <img src="{{ url_for('static', filename='images/challenged.svg') }}" alt="Challenged Image">
+                                <p class="challenge-status">Offen</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cancel-container">
+                        <p>Sollte kein gemeinsamer Termin ausgemacht werden können, besteht die Möglichkeit die Herausforderung einstimmig abzubrechen!</p>
+                        <div class="approve-container-one">
+                            <div class="approve-container-two">
+                                <img src="{{ url_for('static', filename='images/cancel-challenger.svg') }}" alt="Challenger Image">
+                                <p id="cancel-challenger-status" class="challenge-status">nicht abbrechen</p>
+                            </div>
+                            <div id="cancel-challenger-button" onclick="toggleCancelChallengerStatus()" class="user-button">
+                                <svg id="cancel-challenger-icon-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <svg id="cancel-challenger-icon-x" style="display: none;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 8L8 16M16 16L8 8" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="approve-container-one">
+                            <div class="approve-container-two">
+                                <img src="{{ url_for('static', filename='images/cancel-challenged.svg') }}" alt="Challenged Image">
+                                <p id="cancel-challenged-status" class="challenge-status">nicht abbrechen</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bottom-fade"></div>
         </div>
         <div id="sm-rules" style="display: none;" class="side-menu">
             <div class="headline-container">
@@ -109,6 +187,120 @@
         const IS_NEW_PLAYER = {% if (current_player.total_wins + current_player.total_losses) == 0 %}true{% else %}false{% endif %};
         
 
+    </script>
+    <script>
+        let isChallengerConfirmed = false;
+        
+        function updateMatchDate(dateValue) {
+            if (dateValue) {
+                // Convert YYYY-MM-DD to DD.MM.YYYY
+                const dateParts = dateValue.split('-');
+                const formattedDate = `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}`;
+                document.getElementById('match-date-display').textContent = formattedDate;
+                
+                // Automatically set challenger status to confirmed
+                if (!isChallengerConfirmed) {
+                    setChallengerStatus(true);
+                }
+            }
+        }
+        
+        function setChallengerStatus(confirmed) {
+            isChallengerConfirmed = confirmed;
+            const statusElement = document.getElementById('challenger-status');
+            const arrowIcon = document.getElementById('challenger-icon-arrow');
+            const xIcon = document.getElementById('challenger-icon-x');
+            
+            if (confirmed) {
+                statusElement.textContent = 'Bestätigt';
+                arrowIcon.style.display = 'none';
+                xIcon.style.display = 'block';
+            } else {
+                statusElement.textContent = 'Offen';
+                arrowIcon.style.display = 'block';
+                xIcon.style.display = 'none';
+            }
+        }
+        
+        function toggleChallengerStatus() {
+            setChallengerStatus(!isChallengerConfirmed);
+        }
+        
+        // Cancel functionality
+        let isCancelChallengerConfirmed = false;
+        let isCancelChallengedConfirmed = false;
+        
+        function setCancelChallengerStatus(confirmed) {
+            isCancelChallengerConfirmed = confirmed;
+            const statusElement = document.getElementById('cancel-challenger-status');
+            const arrowIcon = document.getElementById('cancel-challenger-icon-arrow');
+            const xIcon = document.getElementById('cancel-challenger-icon-x');
+            
+            if (confirmed) {
+                statusElement.textContent = 'abbrechen';
+                arrowIcon.style.display = 'none';
+                xIcon.style.display = 'block';
+            } else {
+                statusElement.textContent = 'nicht abbrechen';
+                arrowIcon.style.display = 'block';
+                xIcon.style.display = 'none';
+            }
+        }
+        
+        function toggleCancelChallengerStatus() {
+            setCancelChallengerStatus(!isCancelChallengerConfirmed);
+        }
+        
+        function setCancelChallengedStatus(confirmed) {
+            isCancelChallengedConfirmed = confirmed;
+            const statusElement = document.getElementById('cancel-challenged-status');
+            const arrowIcon = document.getElementById('cancel-challenged-icon-arrow');
+            const xIcon = document.getElementById('cancel-challenged-icon-x');
+            
+            if (confirmed) {
+                statusElement.textContent = 'abbrechen';
+                arrowIcon.style.display = 'none';
+                xIcon.style.display = 'block';
+            } else {
+                statusElement.textContent = 'nicht abbrechen';
+                arrowIcon.style.display = 'block';
+                xIcon.style.display = 'none';
+            }
+        }
+        
+        function toggleCancelChallengedStatus() {
+            setCancelChallengedStatus(!isCancelChallengedConfirmed);
+        }
+        
+        let isChallengeConfirmed = false;
+        
+        function challengePlayer() {
+            const buttonText = document.getElementById('challenge-button-text');
+            const challengeButton = document.querySelector('.ball');
+            
+            if (!isChallengeConfirmed) {
+                // First click: Change text to BESTÄTIGEN
+                buttonText.textContent = 'BESTÄTIGEN';
+                isChallengeConfirmed = true;
+                
+                // Trigger shake animation
+                challengeButton.style.animation = 'none';
+                setTimeout(() => {
+                    challengeButton.style.animation = 'shake 0.5s';
+                }, 10);
+                
+                // Open challenge menu
+                getMenu('challenge');
+            } else {
+                // Second click: Show challenges menu icon
+                const challengesIcon = document.getElementById('challenges');
+                if (challengesIcon) {
+                    challengesIcon.style.display = 'block';
+                }
+                
+                // TODO: Submit challenge to backend
+            }
+        }
     </script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>

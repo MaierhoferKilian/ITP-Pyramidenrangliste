@@ -191,6 +191,67 @@ main{
     cursor: pointer;
     color: var(--hl2-color);
 }
+.side-menu .challenge-container {
+    margin: 0 var(--space);
+    overflow-y: auto;
+    height: calc(100% - (var(--space) * 2 + 2rem * 2) );
+    scrollbar-width: none;
+}
+.side-menu .challenge-headline-container{
+    margin-bottom: calc(var(--space) / 2);
+}
+.side-menu .challenge-headline{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.side-menu .challenge-headline h4{
+    color: var(--bg-color);
+    font-size: 1rem;
+    font-weight: 700;
+}
+.side-menu .challenge-headline-container p{
+    color: var(--bg-color);
+    font-size: 1rem;
+    font-weight: 300;
+}
+#margin-top{
+    margin-top: var(--space);
+}
+.side-menu .approve-container-one{
+    display: flex;
+    justify-content: space-between;
+    margin-top: calc(var(--space) / 2);
+}
+.side-menu .approve-container-two{
+    display: flex;
+    align-items: center;
+}
+.side-menu .approve-container-two img{
+    margin-right: calc(var(--space) / 2);
+}
+.side-menu .cancel-container{
+    margin-bottom: calc(var(--space) * 2);
+}
+.side-menu .cancel-container > p{
+    margin-top: calc(var(--space) * 2);
+}
+.side-menu .cancel-container p, .side-menu .cancel-container h4{
+    color: var(--fg-color);
+}
+#cancel-button{
+    background: radial-gradient(circle at 50% 20%, #3A3A6E 20%, #40407A 100%);
+}
+#cancel-button:hover{
+    background: radial-gradient(circle at 50% 20%, #FF5252 20%, #D94646 100%);
+}
+#cancel-button > svg{
+    stroke: var(--hl1-color);
+}
+#cancel-button:hover svg{
+    stroke: var(--bg-color);
+}
+
 .pyramide{
     background-image: url('../images/net.svg');
     height: calc(100vh - (var(--space) * 2 + 4px));
@@ -288,7 +349,7 @@ main{
     width: 24px;
     stroke: var(--bg-color);
 
-    transition: stroke 0.3s ease;
+    transition: stroke 0.2s ease;
 }
 .user-button:hover{
     cursor: pointer;

@@ -28,6 +28,7 @@ svg.call(zoom);
 const container = svg.append("g");
 
 let selectedId = null;
+window.selectedPlayerData = null;
 
 const TOTAL_RECTANGLES = TOTAL_PLAYERS;
 const SPECIAL_POSITION = CURRENT_USER_RANK;
@@ -292,6 +293,9 @@ function selectCell(id, rectElement, globalPosition) {
     if (winRate) winRate.textContent = `${data.win_rate}%`;
     if (highestRank) highestRank.textContent = `#${data.highest_rank}`;
     if (currentRank) currentRank.textContent = `#${data.current_rank}`;
+    
+    // Store selected player data for challenge menu
+    window.selectedPlayerData = data;
 
     getMenu("player");
   })
