@@ -103,9 +103,12 @@
         </div>
     </main>
     <script>
+        
         const TOTAL_PLAYERS = {{ total_players }};
         const CURRENT_USER_RANK = {% if current_player.in_ranking %}{{ current_player.current_rank }}{% else %}0{% endif %};
         const IS_NEW_PLAYER = {% if (current_player.total_wins + current_player.total_losses) == 0 %}true{% else %}false{% endif %};
+        
+
     </script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>
