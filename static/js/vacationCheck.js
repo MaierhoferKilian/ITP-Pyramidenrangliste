@@ -8,7 +8,7 @@ function isVacationPeriod(date) {
     }
     
     // Winter holidays: December 24 to January 6
-    if ((month === 12 && day >= 10) || (month === 1 && day <= 6)) {
+    if ((month === 12 && day >= 24) || (month === 1 && day <= 6)) {
         return true;
     }
     
