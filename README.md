@@ -11,6 +11,7 @@ git clone https://github.com/MaierhoferKilian/ITP-Pyramidenrangliste.git
 
 ### Create Virtual Environment
 python -m venv venv
+
 venv\Scripts\activate
 
 ### Install Requirements
@@ -30,6 +31,13 @@ AUTHORITY=https://login.microsoftonline.com/6dd5291a-610e-4172-a7b6-9a7dc57e9a2a
 REDIRECT_PATH=/getAToken
 
 SCOPE=User.Read
+
+### Init database
+flask db init
+
+flask db migrate -m "Initial migration"
+
+flask db upgrade
 
 ### Start app
 python app.py
