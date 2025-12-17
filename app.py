@@ -67,6 +67,10 @@ class Challenge(db.Model):
     response_date = db.Column(db.Date)
     deadline_date = db.Column(db.Date)
     status = db.Column(db.Enum(StatusEnum), default=StatusEnum.pending)
+    challenger_date_confirmed = db.Column(db.Boolean, default=True)
+    challenged_date_confirmed = db.Column(db.Boolean, default=False)
+    challenger_wants_cancel = db.Column(db.Boolean, default=False)
+    challenged_wants_cancel = db.Column(db.Boolean, default=False)
     
     # Beziehung zu Matches
     matches = db.relationship('Match', backref='challenge', lazy=True)
@@ -75,7 +79,7 @@ class Challenge(db.Model):
     notifications = db.relationship('Notification', backref='challenge', lazy=True)
     
     def __repr__(self):
-        return f'<Challenge {self.challenge_id} - Status: {self.status}>'
+        return f'<Challenge {self.challenge_id} - Status: {self.status}'
 
 # Match-Modell
 class Match(db.Model):
@@ -398,6 +402,389 @@ def leave_ranking():
         return jsonify({"success": True, "message": "You have left the ranking and are blocked for 1 week"})
     
     return jsonify({"error": "Player not found"}), 404
+
+@app.route("/create_challenge", methods=["POST"])
+def create_challenge():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        challenged_uid = data.get("challenged_uid")
+        match_date = data.get("match_date")
+        
+        if not challenged_uid:
+            return jsonify({"error": "No challenged player specified"}), 400
+        
+        current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+        challenged_player = Player.query.filter_by(uid=challenged_uid).first()
+        
+        if not current_player or not challenged_player:
+            return jsonify({"error": "Player not found"}), 404
+        
+        # Check if player is trying to challenge themselves
+        if current_player.uid == challenged_uid:
+            return jsonify({"error": "Sie können sich nicht selbst herausfordern"}), 400
+        
+        # Check if currently in vacation period
+        today = datetime.utcnow().date()
+        if is_vacation_period(today):
+            next_available = get_next_available_date(today)
+            return jsonify({
+                "error": f"Herausforderungen können während der Ferienzeit nicht erstellt werden. Bitte versuchen Sie es nach dem {next_available.strftime('%d.%m.%Y')} erneut."
+            }), 403
+        
+        # Check if challenger already has an active challenge
+        existing_as_challenger = Challenge.query.filter(
+            Challenge.FK_challenger_id == current_player.uid,
+            Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted])
+        ).first()
+        
+        existing_as_challenged = Challenge.query.filter(
+            Challenge.FK_challenged_id == current_player.uid,
+            Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted])
+        ).first()
+        
+        if existing_as_challenger or existing_as_challenged:
+            return jsonify({"error": "Sie haben bereits eine aktive Herausforderung"}), 400
+        
+        # Check if challenged player already has an active challenge
+        challenged_has_challenge = Challenge.query.filter(
+            db.or_(
+                db.and_(
+                    Challenge.FK_challenger_id == challenged_uid,
+                    Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted])
+                ),
+                db.and_(
+                    Challenge.FK_challenged_id == challenged_uid,
+                    Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted])
+                )
+            )
+        ).first()
+        
+        if challenged_has_challenge:
+            return jsonify({"error": "Der Herausgeforderte hat bereits eine aktive Herausforderung"}), 400
+        
+        # Check if this would be a consecutive challenge from the same player
+        last_completed_challenge = Challenge.query.filter(
+            db.or_(
+                db.and_(
+                    Challenge.FK_challenger_id == current_player.uid,
+                    Challenge.FK_challenged_id == challenged_uid
+                ),
+                db.and_(
+                    Challenge.FK_challenger_id == challenged_uid,
+                    Challenge.FK_challenged_id == current_player.uid
+                )
+            ),
+            Challenge.status == StatusEnum.completed
+        ).order_by(Challenge.challenge_id.desc()).first()
+        
+        if last_completed_challenge and last_completed_challenge.FK_challenger_id == current_player.uid:
+            return jsonify({"error": "Sie können denselben Spieler nicht zweimal hintereinander herausfordern"}), 400
+        
+        # Parse match_date
+        deadline = None
+        if match_date:
+            try:
+                match_date_obj = datetime.strptime(match_date, "%Y-%m-%d").date()
+                deadline = match_date_obj
+            except ValueError:
+                return jsonify({"error": "Ungültiges Datumsformat"}), 400
+        
+        # Create new challenge
+        new_challenge = Challenge(
+            FK_challenger_id=current_player.uid,
+            FK_challenged_id=challenged_uid,
+            challenge_date=datetime.utcnow().date(),
+            deadline_date=deadline,
+            status=StatusEnum.pending
+        )
+        
+        db.session.add(new_challenge)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Herausforderung erfolgreich erstellt",
+            "challenge_id": new_challenge.challenge_id
+        })
+        
+    except Exception as e:
+        print(f"Error creating challenge: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Erstellen der Herausforderung"}), 500
+
+@app.route("/get_my_challenges", methods=["GET"])
+def get_my_challenges():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    
+    if not current_player:
+        return jsonify({"error": "Player not found"}), 404
+    
+    # Get all active challenges where current user is involved
+    challenges_as_challenger = Challenge.query.filter(
+        Challenge.FK_challenger_id == current_player.uid,
+        Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted])
+    ).all()
+    
+    challenges_as_challenged = Challenge.query.filter(
+        Challenge.FK_challenged_id == current_player.uid,
+        Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted])
+    ).all()
+    
+    challenges_data = []
+    
+    for challenge in challenges_as_challenger:
+        challenged = Player.query.filter_by(uid=challenge.FK_challenged_id).first()
+        if challenged:
+            challenges_data.append({
+                "challenge_id": challenge.challenge_id,
+                "role": "challenger",
+                "opponent_name": f"{challenged.firstname} {challenged.lastname}",
+                "opponent_rank": challenged.current_rank,
+                "challenger_rank": current_player.current_rank,
+                "status": challenge.status.value,
+                "challenge_date": challenge.challenge_date.strftime("%d.%m.%Y") if challenge.challenge_date else "",
+                "deadline_date": challenge.deadline_date.strftime("%d.%m.%Y") if challenge.deadline_date else "",
+                "challenger_date_confirmed": challenge.challenger_date_confirmed,
+                "challenged_date_confirmed": challenge.challenged_date_confirmed,
+                "challenger_wants_cancel": challenge.challenger_wants_cancel,
+                "challenged_wants_cancel": challenge.challenged_wants_cancel
+            })
+    
+    for challenge in challenges_as_challenged:
+        challenger = Player.query.filter_by(uid=challenge.FK_challenger_id).first()
+        if challenger:
+            challenges_data.append({
+                "challenge_id": challenge.challenge_id,
+                "role": "challenged",
+                "opponent_name": f"{challenger.firstname} {challenger.lastname}",
+                "opponent_rank": challenger.current_rank,
+                "challenged_rank": current_player.current_rank,
+                "status": challenge.status.value,
+                "challenge_date": challenge.challenge_date.strftime("%d.%m.%Y") if challenge.challenge_date else "",
+                "deadline_date": challenge.deadline_date.strftime("%d.%m.%Y") if challenge.deadline_date else "",
+                "challenger_date_confirmed": challenge.challenger_date_confirmed,
+                "challenged_date_confirmed": challenge.challenged_date_confirmed,
+                "challenger_wants_cancel": challenge.challenger_wants_cancel,
+                "challenged_wants_cancel": challenge.challenged_wants_cancel
+            })
+    
+    return jsonify({"challenges": challenges_data})
+
+@app.route("/accept_challenge", methods=["POST"])
+def accept_challenge():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        challenge_id = data.get("challenge_id")
+        
+        if not challenge_id:
+            return jsonify({"error": "No challenge ID specified"}), 400
+        
+        challenge = Challenge.query.filter_by(challenge_id=challenge_id).first()
+        
+        if not challenge:
+            return jsonify({"error": "Challenge not found"}), 404
+        
+        current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+        
+        # Verify the current user is the challenged player
+        if challenge.FK_challenged_id != current_player.uid:
+            return jsonify({"error": "You are not the challenged player"}), 403
+        
+        # Update challenge status
+        challenge.status = StatusEnum.accepted
+        challenge.response_date = datetime.utcnow().date()
+        
+        # Create match with null result
+        new_match = Match(
+            FK_challenge_id=challenge.challenge_id,
+            result=None
+        )
+        
+        db.session.add(new_match)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Herausforderung akzeptiert und Match erstellt",
+            "match_id": new_match.match_id
+        })
+        
+    except Exception as e:
+        print(f"Error accepting challenge: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Akzeptieren der Herausforderung"}), 500
+
+@app.route("/update_challenge_date", methods=["POST"])
+def update_challenge_date():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        challenge_id = data.get("challenge_id")
+        new_date = data.get("new_date")
+        
+        if not challenge_id or not new_date:
+            return jsonify({"error": "Missing challenge ID or date"}), 400
+        
+        challenge = Challenge.query.filter_by(challenge_id=challenge_id).first()
+        
+        if not challenge:
+            return jsonify({"error": "Challenge not found"}), 404
+        
+        current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+        
+        # Verify the current user is involved in this challenge
+        if challenge.FK_challenger_id != current_player.uid and challenge.FK_challenged_id != current_player.uid:
+            return jsonify({"error": "You are not part of this challenge"}), 403
+        
+        # Only allow date updates for pending challenges
+        if challenge.status != StatusEnum.pending:
+            return jsonify({"error": "Can only update date for pending challenges"}), 400
+        
+        # Parse and update the date
+        try:
+            new_date_obj = datetime.strptime(new_date, "%Y-%m-%d").date()
+            challenge.deadline_date = new_date_obj
+            
+            # Reset confirmation status - the person who changed it is confirmed, the other needs to confirm
+            if challenge.FK_challenger_id == current_player.uid:
+                challenge.challenger_date_confirmed = True
+                challenge.challenged_date_confirmed = False
+            else:
+                challenge.challenger_date_confirmed = False
+                challenge.challenged_date_confirmed = True
+            
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": "Datum erfolgreich aktualisiert. Der andere Spieler muss das Datum bestätigen."
+            })
+        except ValueError:
+            return jsonify({"error": "Ungültiges Datumsformat"}), 400
+        
+    except Exception as e:
+        print(f"Error updating challenge date: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Aktualisieren des Datums"}), 500
+
+@app.route("/confirm_challenge_date", methods=["POST"])
+def confirm_challenge_date():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        challenge_id = data.get("challenge_id")
+        
+        if not challenge_id:
+            return jsonify({"error": "Missing challenge ID"}), 400
+        
+        challenge = Challenge.query.filter_by(challenge_id=challenge_id).first()
+        
+        if not challenge:
+            return jsonify({"error": "Challenge not found"}), 404
+        
+        current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+        
+        # Verify the current user is involved in this challenge
+        if challenge.FK_challenger_id != current_player.uid and challenge.FK_challenged_id != current_player.uid:
+            return jsonify({"error": "You are not part of this challenge"}), 403
+        
+        # Only allow confirmation for pending challenges
+        if challenge.status != StatusEnum.pending:
+            return jsonify({"error": "Can only confirm date for pending challenges"}), 400
+        
+        # Update confirmation status
+        if challenge.FK_challenger_id == current_player.uid:
+            challenge.challenger_date_confirmed = True
+        else:
+            challenge.challenged_date_confirmed = True
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Datum bestätigt"
+        })
+        
+    except Exception as e:
+        print(f"Error confirming challenge date: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Bestätigen des Datums"}), 500
+
+@app.route("/toggle_cancel_challenge", methods=["POST"])
+def toggle_cancel_challenge():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        challenge_id = data.get("challenge_id")
+        wants_cancel = data.get("wants_cancel")
+        
+        if not challenge_id or wants_cancel is None:
+            return jsonify({"error": "Missing challenge ID or cancel status"}), 400
+        
+        challenge = Challenge.query.filter_by(challenge_id=challenge_id).first()
+        
+        if not challenge:
+            return jsonify({"error": "Challenge not found"}), 404
+        
+        current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+        
+        # Verify the current user is involved in this challenge
+        if challenge.FK_challenger_id != current_player.uid and challenge.FK_challenged_id != current_player.uid:
+            return jsonify({"error": "You are not part of this challenge"}), 403
+        
+        # Allow cancellation for pending and accepted challenges
+        if challenge.status not in [StatusEnum.pending, StatusEnum.accepted]:
+            return jsonify({"error": "Can only cancel pending or accepted challenges"}), 400
+        
+        # Update cancel status
+        if challenge.FK_challenger_id == current_player.uid:
+            challenge.challenger_wants_cancel = wants_cancel
+        else:
+            challenge.challenged_wants_cancel = wants_cancel
+        
+        # If both want to cancel, delete the challenge and associated match
+        if challenge.challenger_wants_cancel and challenge.challenged_wants_cancel:
+            # Delete associated match if it exists
+            associated_match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
+            if associated_match:
+                db.session.delete(associated_match)
+            
+            # Delete the challenge
+            db.session.delete(challenge)
+            db.session.commit()
+            return jsonify({
+                "success": True,
+                "message": "Herausforderung und Match wurden abgebrochen",
+                "cancelled": True
+            })
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Abbruch-Status aktualisiert",
+            "cancelled": False
+        })
+        
+    except Exception as e:
+        print(f"Error toggling cancel challenge: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Aktualisieren des Abbruch-Status"}), 500
 
 @app.route("/logout")
 def logout():

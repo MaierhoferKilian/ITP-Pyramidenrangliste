@@ -297,6 +297,26 @@ function selectCell(id, rectElement, globalPosition) {
     // Store selected player data for challenge menu
     window.selectedPlayerData = data;
 
+    // Show/hide challenge button
+    const challengeButton = document.querySelector(".ball");
+    if (challengeButton) {
+      // Check if player is trying to challenge themselves
+      if (globalPosition === SPECIAL_POSITION) {
+        // Player selected themselves - hide challenge button
+        challengeButton.style.display = "none";
+      } else if (isChallengeable(globalPosition)) {
+        // Player can challenge this position
+        challengeButton.style.display = "flex";
+        challengeButton.style.animation = "none";
+        setTimeout(() => {
+          challengeButton.style.animation = "shake 0.5s";
+        }, 10);
+      } else {
+        // Position is not challengeable
+        challengeButton.style.display = "none";
+      }
+    }
+
     getMenu("player");
   })
   .catch(error => {
