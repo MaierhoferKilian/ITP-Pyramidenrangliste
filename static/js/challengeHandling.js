@@ -308,6 +308,49 @@ function displayChallenges(challenges) {
                     </div>
                 </div>
                 <p style="margin-top: calc(var(--space) / 2);">Status: ${statusText}</p>
+                ${(function(){
+                    if (challenge.status === 'accepted' && challenge.challenge_date) {
+                        const parts = challenge.deadline_date ? challenge.deadline_date.split('.') : null;
+                        if (parts && parts.length === 3) {
+                            const matchDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                            const today = new Date();
+                            today.setHours(0,0,0,0);
+                            
+                            if (today >= matchDate) {
+                                const imChallenger = challenge.role === 'challenger';
+                                const myConfirmed = imChallenger ? challenge.challenger_result_confirmed : challenge.challenged_result_confirmed;
+                                const opponentConfirmed = imChallenger ? challenge.challenged_result_confirmed : challenge.challenger_result_confirmed;
+                                const result = challenge.match_result;
+
+                                let buttonText = "Ergebnis eintragen";
+                                let buttonColor = "var(--bg-color)";
+                                let textColor = "var(--fg-color)";
+                                let additionalText = "";
+
+                                if (result) {
+                                    if (myConfirmed && !opponentConfirmed) {
+                                        buttonText = "Warte auf Bestätigung";
+                                        additionalText = `<p style="font-size: 0.8rem; margin-top: 5px;">Eingetragen: ${result}</p>`;
+                                    } else if (!myConfirmed && opponentConfirmed) {
+                                        buttonText = "Ergebnis bestätigen";
+                                        buttonColor = "var(--hl3-color)"; // Highlight for action needed
+                                    } else if (myConfirmed && opponentConfirmed) {
+                                        return `<p style="margin-top: calc(var(--space) / 2);">Ergebnis: ${result}</p>`;
+                                    }
+                                }
+
+                                return `<div class="user-button" onclick="openResultModal(${challenge.challenge_id}, '${challenge.role}', '${result || ''}')" style="margin-top: calc(var(--space) / 2); width: auto; padding: 5px 10px; justify-content: center; background-color: ${buttonColor}; border: 2px solid var(--fg-color);">
+                                            <span style="margin-right: 5px; font-weight: bold; color: ${textColor};">${buttonText}</span>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 20h9" stroke="${textColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="${textColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </div>${additionalText}`;
+                            }
+                        }
+                    }
+                    return '';
+                })()}
             </div>
         `;
         
@@ -477,6 +520,88 @@ function acceptChallenge(challengeId) {
         if (data.success) {
             alert(data.message);
             loadMyChallenges();
+        } else {
+            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten.');
+    });
+}
+
+
+function openResultModal(challengeId, role, currentResult) {
+    document.getElementById('result-challenge-id').value = challengeId;
+    document.getElementById('result-user-role').value = role;
+    
+    // Reset values
+    let mySets = "0";
+    let opponentSets = "0";
+
+    if (currentResult && currentResult.includes(':')) {
+        const parts = currentResult.split(':');
+        // Result is always Challenger:Challenged
+        if (role === 'challenger') {
+            mySets = parts[0];
+            opponentSets = parts[1];
+        } else {
+            mySets = parts[1];
+            opponentSets = parts[0];
+        }
+    }
+
+    document.getElementById('my-sets').value = mySets;
+    document.getElementById('opponent-sets').value = opponentSets;
+    
+    // Show modal
+    document.getElementById('result-modal').style.display = 'flex';
+}
+
+function closeResultModal() {
+    document.getElementById('result-modal').style.display = 'none';
+}
+
+function submitResult() {
+    const challengeId = document.getElementById('result-challenge-id').value;
+    const role = document.getElementById('result-user-role').value;
+    const mySets = document.getElementById('my-sets').value;
+    const opponentSets = document.getElementById('opponent-sets').value;
+    
+    // Simple validation
+    if (mySets === opponentSets) {
+        alert("Unentschieden ist in diesem Modus nicht möglich.");
+        return;
+    }
+    
+    // Create result string "Challenger:Challenged"
+    let resultString = "";
+    if (role === 'challenger') {
+        resultString = `${mySets}:${opponentSets}`;
+    } else {
+        resultString = `${opponentSets}:${mySets}`;
+    }
+    
+    fetch('/submit_match_result', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            challenge_id: challengeId,
+            result: resultString
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.confirmed) {
+                alert('Ergebnis bestätigt und Match abgeschlossen!');
+            } else {
+                alert('Ergebnis eingetragen. Der andere Spieler muss noch bestätigen.');
+            }
+            closeResultModal();
+            loadMyChallenges(); // Reload challenges to update view
         } else {
             alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
         }

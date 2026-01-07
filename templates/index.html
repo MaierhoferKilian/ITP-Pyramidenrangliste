@@ -198,4 +198,35 @@
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>
     <script src="{{ url_for('static', filename='js/userExitHandling.js') }}"></script>
     <script src="{{ url_for('static', filename='js/vacationCheck.js') }}"></script>
+
+    <!-- Result Entry Modal -->
+    <div id="result-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--bg-color); padding: var(--space); border: 4px solid var(--fg-color); width: 400px; text-align: center;">
+            <h3 style="margin-bottom: var(--space); color: var(--fg-color);">ERGEBNIS EINTRAGEN</h3>
+            <div style="margin-bottom: var(--space);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <label style="font-weight: bold;">Meine Sätze:</label>
+                    <select id="my-sets" style="width: 60px; padding: 5px; font-size: 1.2rem; border: 2px solid var(--fg-color); background: var(--bg-color);">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="font-weight: bold;">Gegner Sätze:</label>
+                    <select id="opponent-sets" style="width: 60px; padding: 5px; font-size: 1.2rem; border: 2px solid var(--fg-color); background: var(--bg-color);">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: var(--space);">
+                <button onclick="closeResultModal()" style="border: 2px solid var(--fg-color); background: transparent; padding: 10px 20px; cursor: pointer; font-weight: bold; color: var(--fg-color);">ABBRECHEN</button>
+                <button onclick="submitResult()" style="border: 2px solid var(--fg-color); background: var(--hl1-color); padding: 10px 20px; cursor: pointer; font-weight: bold; color: white;">BESTÄTIGEN</button>
+            </div>
+            <input type="hidden" id="result-challenge-id">
+            <input type="hidden" id="result-user-role">
+        </div>
+    </div>
 {% endblock %}

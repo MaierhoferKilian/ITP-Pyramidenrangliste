@@ -71,6 +71,8 @@ class Challenge(db.Model):
     challenged_date_confirmed = db.Column(db.Boolean, default=False)
     challenger_wants_cancel = db.Column(db.Boolean, default=False)
     challenged_wants_cancel = db.Column(db.Boolean, default=False)
+    challenger_result_confirmed = db.Column(db.Boolean, default=False)
+    challenged_result_confirmed = db.Column(db.Boolean, default=False)
     
     # Beziehung zu Matches
     matches = db.relationship('Match', backref='challenge', lazy=True)
@@ -466,21 +468,16 @@ def create_challenge():
             return jsonify({"error": "Der Herausgeforderte hat bereits eine aktive Herausforderung"}), 400
         
         # Check if this would be a consecutive challenge from the same player
+        # We check the user's OVERALL last challenge, not just against this specific opponent.
         last_completed_challenge = Challenge.query.filter(
             db.or_(
-                db.and_(
-                    Challenge.FK_challenger_id == current_player.uid,
-                    Challenge.FK_challenged_id == challenged_uid
-                ),
-                db.and_(
-                    Challenge.FK_challenger_id == challenged_uid,
-                    Challenge.FK_challenged_id == current_player.uid
-                )
+                Challenge.FK_challenger_id == current_player.uid,
+                Challenge.FK_challenged_id == current_player.uid
             ),
             Challenge.status == StatusEnum.completed
         ).order_by(Challenge.challenge_id.desc()).first()
         
-        if last_completed_challenge and last_completed_challenge.FK_challenger_id == current_player.uid:
+        if last_completed_challenge and last_completed_challenge.FK_challenger_id == current_player.uid and last_completed_challenge.FK_challenged_id == challenged_uid:
             return jsonify({"error": "Sie können denselben Spieler nicht zweimal hintereinander herausfordern"}), 400
         
         # Parse match_date
@@ -540,6 +537,7 @@ def get_my_challenges():
     
     for challenge in challenges_as_challenger:
         challenged = Player.query.filter_by(uid=challenge.FK_challenged_id).first()
+        match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
         if challenged:
             challenges_data.append({
                 "challenge_id": challenge.challenge_id,
@@ -553,11 +551,15 @@ def get_my_challenges():
                 "challenger_date_confirmed": challenge.challenger_date_confirmed,
                 "challenged_date_confirmed": challenge.challenged_date_confirmed,
                 "challenger_wants_cancel": challenge.challenger_wants_cancel,
-                "challenged_wants_cancel": challenge.challenged_wants_cancel
+                "challenged_wants_cancel": challenge.challenged_wants_cancel,
+                "challenger_result_confirmed": challenge.challenger_result_confirmed,
+                "challenged_result_confirmed": challenge.challenged_result_confirmed,
+                "match_result": match.result if match else None
             })
     
     for challenge in challenges_as_challenged:
         challenger = Player.query.filter_by(uid=challenge.FK_challenger_id).first()
+        match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
         if challenger:
             challenges_data.append({
                 "challenge_id": challenge.challenge_id,
@@ -571,7 +573,10 @@ def get_my_challenges():
                 "challenger_date_confirmed": challenge.challenger_date_confirmed,
                 "challenged_date_confirmed": challenge.challenged_date_confirmed,
                 "challenger_wants_cancel": challenge.challenger_wants_cancel,
-                "challenged_wants_cancel": challenge.challenged_wants_cancel
+                "challenged_wants_cancel": challenge.challenged_wants_cancel,
+                "challenger_result_confirmed": challenge.challenger_result_confirmed,
+                "challenged_result_confirmed": challenge.challenged_result_confirmed,
+                "match_result": match.result if match else None
             })
     
     return jsonify({"challenges": challenges_data})
@@ -823,6 +828,99 @@ def authorized():
         return redirect(url_for("index"))
 
     return "Authentication failed", 400
+
+@app.route("/submit_match_result", methods=["POST"])
+def submit_match_result():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    data = request.get_json()
+    challenge_id = data.get("challenge_id")
+    result_str = data.get("result")
+    
+    if not challenge_id or not result_str:
+        return jsonify({"error": "Missing data"}), 400
+        
+    current_uid = session["user"]["oid"]
+    
+    challenge = Challenge.query.get(challenge_id)
+    if not challenge:
+        return jsonify({"error": "Challenge not found"}), 404
+        
+    if challenge.FK_challenger_id != current_uid and challenge.FK_challenged_id != current_uid:
+        return jsonify({"error": "Not authorized"}), 403
+        
+    # Find the match associated with this challenge
+    match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
+    if not match:
+        # Create match if it doesn't exist
+        match = Match(FK_challenge_id=challenge.challenge_id)
+        db.session.add(match)
+    
+    # Check if result is changing
+    is_new_result = match.result != result_str
+    
+    match.result = result_str
+    
+    # Update confirmation status
+    if challenge.FK_challenger_id == current_uid:
+        challenge.challenger_result_confirmed = True
+        if is_new_result:
+            challenge.challenged_result_confirmed = False
+    else:
+        challenge.challenged_result_confirmed = True
+        if is_new_result:
+            challenge.challenger_result_confirmed = False
+
+    # Check if both confirmed
+    if challenge.challenger_result_confirmed and challenge.challenged_result_confirmed:
+        # Update stats and ranks
+        try:
+            # Format is "challenger_sets:challenged_sets"
+            sets = result_str.split(':')
+            if len(sets) == 2:
+                challenger_score = int(sets[0])
+                challenged_score = int(sets[1])
+                
+                challenger = Player.query.get(challenge.FK_challenger_id)
+                challenged = Player.query.get(challenge.FK_challenged_id)
+                
+                if challenger and challenged:
+                    # Update wins/losses
+                    if challenger_score > challenged_score:
+                        challenger.total_wins += 1
+                        challenged.total_losses += 1
+                        
+                        # Swap ranks if challenger won against someone with better rank (lower number)
+                        if challenger.current_rank and challenged.current_rank and challenger.current_rank > challenged.current_rank:
+                            temp_rank = challenger.current_rank
+                            challenger.current_rank = challenged.current_rank
+                            challenged.current_rank = temp_rank
+                            
+                            # Update highest rank
+                            if challenger.highest_rank is None or challenger.current_rank < challenger.highest_rank:
+                                challenger.highest_rank = challenger.current_rank
+                    else:
+                        challenged.total_wins += 1
+                        challenger.total_losses += 1
+                        # No rank change if challenged wins (defended position)
+                        
+        except Exception as e:
+            print(f"Error updating stats: {e}")
+            # Continue to at least save the match result
+        
+        # Mark challenge as completed
+        challenge.status = StatusEnum.completed
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            "success": True, 
+            "confirmed": challenge.challenger_result_confirmed and challenge.challenged_result_confirmed
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():
