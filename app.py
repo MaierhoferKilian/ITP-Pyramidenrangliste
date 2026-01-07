@@ -267,7 +267,7 @@ def is_vacation_period(date):
         return True
     
     # Winter holidays: December 24 to January 6
-    if (month == 12 and day >= 10) or (month == 1 and day <= 6):
+    if (month == 12 and day >= 24) or (month == 1 and day <= 6):
         return True
     
     return False

@@ -2,8 +2,10 @@
 
 {% block content %}
     <header>
-        <img src="{{ url_for('static', filename='images/htlwy_logo.svg') }}" alt="HTLWY Logo" width="100" height="100">
+        <img src="{{ url_for('static', filename='images/htlwy_logo.svg') }}" alt="HTLWY Logo">
         <h1>TISCHTENNIS RANGLISTE</h1>
+        <img id="menu" src="{{ url_for('static', filename='images/menu_collapsed.svg') }}" alt="Menü">
+        <img id="menu-close" src="{{ url_for('static', filename='images/menu_close.svg') }}" alt="X">
     </header>
     <main>
         <div class="pyramide">
@@ -78,7 +80,7 @@
                         <h4>HERAUSGEFORDERTER</h4>
                         <img src="{{ url_for('static', filename='images/challenged.svg') }}" alt="Challenged Image">
                     </div>
-                    <p id="challenged-player-name">xxx</p>
+                    <p id="challenged-player-name">Spieler nicht gefunden</p>
                 </div>
                 <div id="margin-top" class="challenge-headline-container">
                     <div class="challenge-headline">
@@ -188,8 +190,8 @@
     </main>
     <script>
         
-        const TOTAL_PLAYERS = {{ total_players }};
-        const CURRENT_USER_RANK = {% if current_player.in_ranking %}{{ current_player.current_rank }}{% else %}0{% endif %};
+        const TOTAL_PLAYERS = 25//{{ total_players }};
+        const CURRENT_USER_RANK = 12//{% if current_player.in_ranking %}{{ current_player.current_rank }}{% else %}0{% endif %};
         const IS_NEW_PLAYER = {% if (current_player.total_wins + current_player.total_losses) == 0 %}true{% else %}false{% endif %};
         
 
@@ -312,4 +314,34 @@
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>
     <script src="{{ url_for('static', filename='js/userExitHandling.js') }}"></script>
     <script src="{{ url_for('static', filename='js/vacationCheck.js') }}"></script>
+    <script>
+        // Mobile menu toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuButton = document.getElementById('menu');
+            const menuCloseButton = document.getElementById('menu-close');
+            
+            console.log('Menu button:', menuButton);
+            console.log('Menu close button:', menuCloseButton);
+            
+            // Open last active menu on mobile when clicking menu button
+            if (menuButton) {
+                menuButton.addEventListener('click', function(e) {
+                    console.log('Menu button clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openLastActiveMenu();
+                });
+            }
+            
+            // Close menu on mobile when clicking close button
+            if (menuCloseButton) {
+                menuCloseButton.addEventListener('click', function(e) {
+                    console.log('Close button clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeMenu();
+                });
+            }
+        });
+    </script>
 {% endblock %}
