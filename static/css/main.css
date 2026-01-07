@@ -63,11 +63,19 @@ header img{
     height: var(--space);
     width: auto;
 }
+header #menu, header #menu-close{
+    height: calc(var(--space) / 2);
+    margin-right: var(--space);
+    width: auto;
+    display: none;
+    cursor: pointer;
+}
 header h1{
     color: var(--fg-color);
     margin: 0 var(--space);
     font-size: 2rem;
     font-weight: 700;
+    text-align: right;
 }
 main{
     padding-top: calc(var(--space) * 2 + 4px);
@@ -420,4 +428,78 @@ svg {
 }
 .parent-indicator.active {
     opacity: 1;
+}
+
+@media (max-width: 1031.534px){
+    /* Mobile: Hide side menu by default, show pyramid */
+    main {
+        position: relative;
+    }
+    
+    .side-menu{
+        position: fixed;
+        top: calc(var(--space) * 2 + 4px);
+        left: 0;
+        width: 100vw !important;
+        height: calc(100vh - (var(--space) * 2 + 4px));
+        z-index: 1000;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        pointer-events: none;
+    }
+    
+    /* When side menu is active, slide it in */
+    .side-menu.mobile-active {
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+    
+    /* Hide pyramid when side menu is active */
+    body.menu-open .pyramide {
+        visibility: hidden;
+        pointer-events: none;
+    }
+    
+    .pyramide{
+        width: 100vw;
+        position: relative;
+        z-index: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .pyramide .ball{
+        right: calc(var(--space) / 2);
+    }
+    .pyramide .menu{
+        right: calc(var(--space) / 2);
+    }
+
+    header h1{
+        display: none;
+    }
+    
+    header #menu{
+        display: block;
+        z-index: 2000;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    header #menu-close{
+        display: none;
+        z-index: 2000;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    /* Show close button when menu is open */
+    body.menu-open header #menu {
+        display: none;
+    }
+    
+    body.menu-open header #menu-close {
+        display: block;
+        cursor: pointer;
+    }
 }
