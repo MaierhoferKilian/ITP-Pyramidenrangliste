@@ -6,15 +6,18 @@ function getMenu(menuType){
     document.getElementById("sm-rules").style.display="none";
     document.getElementById("sm-player").style.display="none";
     document.getElementById("sm-challenge").style.display="none";
+    document.getElementById("sm-history").style.display="none";
     
     // Remove mobile-active class from all side menus
     document.getElementById("sm-user").classList.remove("mobile-active");
     document.getElementById("sm-rules").classList.remove("mobile-active");
     document.getElementById("sm-player").classList.remove("mobile-active");
     document.getElementById("sm-challenge").classList.remove("mobile-active");
+    document.getElementById("sm-history").classList.remove("mobile-active");
     
     document.getElementById("rules").classList.remove("active");
     document.getElementById("user").classList.remove("active");
+    document.getElementById("report").classList.remove("active");
 
     const vacationContainer = document.getElementById('vacation-warning-sidemenu');
     if (vacationContainer) {
@@ -36,6 +39,15 @@ function getMenu(menuType){
         document.getElementById("sm-rules").classList.add("mobile-active");
         document.getElementById("rules").classList.add("active");
         lastActiveMenu = 'rules';
+    }
+    else if (menuType==="history"){
+        document.getElementById("sm-history").style.display="block";
+        document.getElementById("sm-history").classList.add("mobile-active");
+        document.getElementById("report").classList.add("active");
+        lastActiveMenu = 'history';
+        if (typeof loadMatchHistory === 'function') {
+            loadMatchHistory();
+        }
     }
     else if (menuType==="player"){
         document.getElementById("sm-player").style.display="block";
@@ -118,6 +130,7 @@ function closeMenu() {
             document.getElementById("sm-rules").style.display="none";
             document.getElementById("sm-player").style.display="none";
             document.getElementById("sm-challenge").style.display="none";
+            document.getElementById("sm-history").style.display="none";
             console.log('Set all menus to display none');
         }, 300); // Match the CSS transition duration
     }
@@ -125,6 +138,7 @@ function closeMenu() {
     // Also remove active states from menu icons
     document.getElementById("rules").classList.remove("active");
     document.getElementById("user").classList.remove("active");
+    document.getElementById("report").classList.remove("active");
     console.log('closeMenu completed');
 }
 

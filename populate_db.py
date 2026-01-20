@@ -67,7 +67,7 @@ def populate_users():
         
         print("Generating match history...")
         
-        results = ["3:0", "3:1", "3:2", "0:3", "1:3", "2:3", "3:0", "0:3"]
+        results = ["2:0", "2:1", "0:2", "1:2", "2:0", "0:2"]
         
         # 1. Past completed matches (Stats)
         for _ in range(60): # 60 historic matches

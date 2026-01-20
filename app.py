@@ -1057,6 +1057,36 @@ def submit_match_result():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/get_match_history", methods=["GET"])
+def get_match_history():
+    try:
+        # Get last 10 matches with results
+        matches = db.session.query(Match, Challenge).join(Challenge, Match.FK_challenge_id == Challenge.challenge_id)\
+            .filter(Match.result.isnot(None))\
+            .order_by(Match.match_date.desc())\
+            .limit(10).all()
+            
+        history = []
+        for match, challenge in matches:
+            challenger = Player.query.get(challenge.FK_challenger_id)
+            challenged = Player.query.get(challenge.FK_challenged_id)
+            
+            if challenger and challenged:
+                # Format match date
+                date_str = match.match_date.strftime("%d.%m.%Y") if match.match_date else ""
+                
+                history.append({
+                    "date": date_str,
+                    "challenger": f"{challenger.firstname} {challenger.lastname}",
+                    "challenged": f"{challenged.firstname} {challenged.lastname}",
+                    "result": match.result
+                })
+                
+        return jsonify({"history": history})
+    except Exception as e:
+        print(f"Error fetching match history: {e}")
+        return jsonify({"error": "Failed to fetch match history"}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
