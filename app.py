@@ -300,9 +300,32 @@ def index():
     cleanup_inactive_players()
     
     current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    
+    # Check for active challenges
+    has_active_challenge = False
+    active_challenge_opponent_rank = None
+    
+    if current_player:
+        active_statuses = [StatusEnum.pending, StatusEnum.accepted]
+        active_challenge = Challenge.query.filter(
+            ((Challenge.FK_challenger_id == current_player.uid) | (Challenge.FK_challenged_id == current_player.uid)) &
+            Challenge.status.in_(active_statuses)
+        ).first()
+        
+        if active_challenge:
+            has_active_challenge = True
+            opponent_id = active_challenge.FK_challenged_id if active_challenge.FK_challenger_id == current_player.uid else active_challenge.FK_challenger_id
+            opponent = Player.query.filter_by(uid=opponent_id).first()
+            if opponent:
+                active_challenge_opponent_rank = opponent.current_rank
+
     total_players = Player.query.filter(Player.in_ranking == True).count()
     
-    return render_template("index.html", current_player=current_player, total_players=total_players)
+    return render_template("index.html", 
+                           current_player=current_player, 
+                           total_players=total_players, 
+                           has_active_challenge=has_active_challenge,
+                           active_challenge_opponent_rank=active_challenge_opponent_rank)
 
 @app.route("/selected_player", methods=["POST"])
 def selected_player():

@@ -31,6 +31,39 @@ let selectedId = null;
 window.selectedPlayerData = null;
 
 const TOTAL_RECTANGLES = TOTAL_PLAYERS;
+
+function deselectAll() {
+  if (selectedId) {
+    container.select(`[data-id="${selectedId}"] .selected-indicator`)
+      .classed("active", false);
+    selectedId = null;
+    window.selectedPlayerData = null;
+    
+    // Hide challenge button
+    const challengeButton = document.querySelector(".ball");
+    if (challengeButton) {
+      challengeButton.style.display = "none";
+    }
+  }
+}
+
+// Reset view when clicking background
+svg.on("click", function(event) {
+  // Check if click was on background (svg)
+  // Since cell clicks use stopPropagation, this should only fire for background
+  if (selectedId) {
+    deselectAll();
+    
+    // Reset side menu
+    getMenu("user");
+  }
+  
+  fitPyramidToView(true);
+});
+
+// Expose globally
+window.deselectAll = deselectAll;
+
 const SPECIAL_POSITION = CURRENT_USER_RANK;
 let IS_CURRENT_USER_NEW = typeof IS_NEW_PLAYER !== 'undefined' ? IS_NEW_PLAYER : false;
 
@@ -191,6 +224,14 @@ function drawPyramid(totalRectangles) {
         .attr("height", 10)
         .attr("class", "parent-indicator");
       
+      // Create active challenge indicator (dark green)
+      cellGroup.append("rect")
+        .attr("x", x + rectW/2 - 10) 
+        .attr("y", y + rectH/2 - 5)
+        .attr("width", 20)
+        .attr("height", 10)
+        .attr("class", "active-challenge-indicator");
+
       // Create hover indicator
       cellGroup.append("rect")
         .attr("x", x + rectW/2 - 10)
@@ -210,29 +251,42 @@ function drawPyramid(totalRectangles) {
 function applySpecialIndicators() {
   container.selectAll(".special-indicator").classed("active", false);
   container.selectAll(".parent-indicator").classed("active", false);
+  container.selectAll(".active-challenge-indicator").classed("active", false);
   
   if (SPECIAL_POSITION <= TOTAL_RECTANGLES) {
     // Always show red indicator for own position
     container.select(`[data-id="cell-${SPECIAL_POSITION}"] .special-indicator`)
       .classed("active", true);
     
-    // Get normal pyramid challengeable positions
-    const parentPositions = getParentPositions(SPECIAL_POSITION);
-    
-    // Highlight normal pyramid positions
-    parentPositions.forEach(parentPos => {
-      if (parentPos >= 1 && parentPos <= TOTAL_RECTANGLES) {
-        container.select(`[data-id="cell-${parentPos}"] .parent-indicator`)
-          .classed("active", true);
-      }
-    });
-    
-    // If current user is new and not in top 6, ALSO highlight positions 7 to own position - 1
-    if (IS_CURRENT_USER_NEW && SPECIAL_POSITION > 6) {
-      for (let i = 7; i < SPECIAL_POSITION; i++) {
-        container.select(`[data-id="cell-${i}"] .parent-indicator`)
-          .classed("active", true);
-      }
+    // Check if there is an active challenge
+    const hasActiveChallenge = typeof HAS_ACTIVE_CHALLENGE !== 'undefined' ? HAS_ACTIVE_CHALLENGE : false;
+    const opponentRank = typeof ACTIVE_CHALLENGE_OPPONENT_RANK !== 'undefined' ? ACTIVE_CHALLENGE_OPPONENT_RANK : null;
+
+    if (hasActiveChallenge) {
+        // If there is an active challenge, only highlight the opponent with dark green
+        if (opponentRank && opponentRank > 0) {
+            container.select(`[data-id="cell-${opponentRank}"] .active-challenge-indicator`)
+                .classed("active", true);
+        }
+    } else {
+        // Normal logic: Get challengeable positions
+        const parentPositions = getParentPositions(SPECIAL_POSITION);
+        
+        // Highlight normal pyramid positions (orange)
+        parentPositions.forEach(parentPos => {
+          if (parentPos >= 1 && parentPos <= TOTAL_RECTANGLES) {
+            container.select(`[data-id="cell-${parentPos}"] .parent-indicator`)
+              .classed("active", true);
+          }
+        });
+        
+        // If current user is new and not in top 6, ALSO highlight positions 7 to own position - 1
+        if (IS_CURRENT_USER_NEW && SPECIAL_POSITION > 6) {
+          for (let i = 7; i < SPECIAL_POSITION; i++) {
+            container.select(`[data-id="cell-${i}"] .parent-indicator`)
+              .classed("active", true);
+          }
+        }
     }
   }
 }
@@ -249,8 +303,10 @@ function selectCell(id, rectElement, globalPosition) {
   
   // Show/hide challenge button
   const challengeButton = document.querySelector(".ball");
+  const hasActiveChallenge = typeof HAS_ACTIVE_CHALLENGE !== 'undefined' ? HAS_ACTIVE_CHALLENGE : false;
+
   if (challengeButton) {
-    if (isChallengeable(globalPosition)) {
+    if (isChallengeable(globalPosition) && !hasActiveChallenge) {
       challengeButton.style.display = "flex";
       challengeButton.style.animation = "none";
       setTimeout(() => {
@@ -285,7 +341,13 @@ function selectCell(id, rectElement, globalPosition) {
     const highestRank = document.getElementById("highest-rank");
     const currentRank = document.getElementById("current-rank");
 
-    if (playerName) playerName.textContent = `${data.firstname} ${data.lastname}`;
+    if (playerName) {
+      if (globalPosition === SPECIAL_POSITION) {
+        playerName.textContent = `${data.firstname} ${data.lastname} (Sie)`;
+      } else {
+        playerName.textContent = `${data.firstname} ${data.lastname}`;
+      }
+    }
     if (playerClass) playerClass.textContent = data.class || "-";
     if (playerEmail) playerEmail.textContent = data.email || "-";
     if (totalWins) totalWins.textContent = data.total_wins;
@@ -299,20 +361,22 @@ function selectCell(id, rectElement, globalPosition) {
 
     // Show/hide challenge button
     const challengeButton = document.querySelector(".ball");
+    const hasActiveChallenge = typeof HAS_ACTIVE_CHALLENGE !== 'undefined' ? HAS_ACTIVE_CHALLENGE : false;
+
     if (challengeButton) {
       // Check if player is trying to challenge themselves
       if (globalPosition === SPECIAL_POSITION) {
         // Player selected themselves - hide challenge button
         challengeButton.style.display = "none";
-      } else if (isChallengeable(globalPosition)) {
-        // Player can challenge this position
+      } else if (isChallengeable(globalPosition) && !hasActiveChallenge) {
+        // Player can challenge this position AND has no active challenge
         challengeButton.style.display = "flex";
         challengeButton.style.animation = "none";
         setTimeout(() => {
           challengeButton.style.animation = "shake 0.5s";
         }, 10);
       } else {
-        // Position is not challengeable
+        // Position is not challengeable or player has active challenge
         challengeButton.style.display = "none";
       }
     }
@@ -350,7 +414,7 @@ function centerOnSelected() {
     .call(zoom.transform, transform);
 }
 
-function fitPyramidToView() {
+function fitPyramidToView(animate = false) {
   const contentBBox = container.node().getBBox();
   
   if (contentBBox.width === 0 || contentBBox.height === 0) return;
@@ -368,8 +432,17 @@ function fitPyramidToView() {
     .scale(scale)
     .translate(-centerX, -centerY);
   
-  svg.call(zoom.transform, transform);
+  if (animate) {
+    svg.transition()
+      .duration(750)
+      .call(zoom.transform, transform);
+  } else {
+    svg.call(zoom.transform, transform);
+  }
 }
+
+// Expose function globally
+window.fitPyramidToView = fitPyramidToView;
 
 // Initial draw
 drawPyramid(TOTAL_RECTANGLES);

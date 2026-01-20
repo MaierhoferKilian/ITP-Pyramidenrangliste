@@ -31,7 +31,7 @@
         </div>
         <div id="sm-user" style="display: block;" class="side-menu">
             <div class="headline-container">
-                <h2 id="user-name">{{current_player.firstname}} {{current_player.lastname}}</h2>
+                <h2 id="user-name">{{current_player.firstname}} {{current_player.lastname}} (Sie)</h2>
             </div>
             <div class="options-container">
                 {% if not current_player.in_ranking %}
@@ -194,6 +194,8 @@
         const TOTAL_PLAYERS = {{ total_players }};
         const CURRENT_USER_RANK = {% if current_player.in_ranking %}{{ current_player.current_rank }}{% else %}0{% endif %};
         const IS_NEW_PLAYER = {% if (current_player.total_wins + current_player.total_losses) == 0 %}true{% else %}false{% endif %};
+        const HAS_ACTIVE_CHALLENGE = {% if has_active_challenge %}true{% else %}false{% endif %};
+        const ACTIVE_CHALLENGE_OPPONENT_RANK = {% if active_challenge_opponent_rank %}{{ active_challenge_opponent_rank }}{% else %}null{% endif %};
     </script>
     <script src="{{ url_for('static', filename='js/challengeHandling.js') }}"></script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>

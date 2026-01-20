@@ -152,27 +152,7 @@ function challengePlayer() {
         .then(data => {
             if (data.success) {
                 alert(data.message);
-                
-                // Show challenges menu icon
-                const challengesIcon = document.getElementById('challenges');
-                if (challengesIcon) {
-                    challengesIcon.style.display = 'block';
-                }
-                
-                // Reset challenge button
-                buttonText.textContent = 'HERAUS FORDERN';
-                isChallengeConfirmed = false;
-                isChallengerConfirmed = false;
-                challengeButton.style.display = 'none';
-                
-                // Reset form
-                matchDatePicker.value = '';
-                document.getElementById('match-date-display').textContent = 'Datum wählen';
-                setChallengerStatus(false);
-                
-                // Load challenges and show challenges menu
-                loadMyChallenges();
-                getMenu('challenges');
+                location.reload();
             } else {
                 alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
             }
@@ -597,11 +577,12 @@ function submitResult() {
         if (data.success) {
             if (data.confirmed) {
                 alert('Ergebnis bestätigt und Match abgeschlossen!');
+                location.reload();
             } else {
                 alert('Ergebnis eingetragen. Der andere Spieler muss noch bestätigen.');
+                closeResultModal();
+                loadMyChallenges(); // Reload challenges to update view
             }
-            closeResultModal();
-            loadMyChallenges(); // Reload challenges to update view
         } else {
             alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
         }

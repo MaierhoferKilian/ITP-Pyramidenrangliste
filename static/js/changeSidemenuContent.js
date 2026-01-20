@@ -21,6 +21,16 @@ function getMenu(menuType){
         vacationContainer.style.display = 'none';
     }
 
+    // Recenter pyramid unless we are viewing player details (which zooms in)
+    if (menuType !== 'player' && menuType !== 'challenge') {
+        if (typeof window.fitPyramidToView === 'function') {
+            window.fitPyramidToView(true);
+        }
+        if (typeof window.deselectAll === 'function') {
+            window.deselectAll();
+        }
+    }
+
     if (menuType==="rules"){
         document.getElementById("sm-rules").style.display="block";
         document.getElementById("sm-rules").classList.add("mobile-active");

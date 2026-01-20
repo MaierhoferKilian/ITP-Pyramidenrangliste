@@ -11,6 +11,7 @@
     --hl1-color: #706FD3;
     --hl2-color: #FF5252;
     --hl3-color: #FFB142;
+    --hl4-color: #218c74;
 
     --space: 36px;
 }
@@ -427,6 +428,14 @@ svg {
     opacity: 0;
 }
 .parent-indicator.active {
+    opacity: 1;
+}
+.active-challenge-indicator {
+    fill: var(--hl4-color);
+    pointer-events: none;
+    opacity: 0;
+}
+.active-challenge-indicator.active {
     opacity: 1;
 }
 
