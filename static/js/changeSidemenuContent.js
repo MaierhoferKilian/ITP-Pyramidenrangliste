@@ -145,3 +145,43 @@ function closeMenu() {
 function openLastActiveMenu() {
     getMenu(lastActiveMenu);
 }
+
+// Function to copy email to clipboard
+function copyEmail() {
+    const emailElement = document.getElementById('player-email');
+    const email = emailElement.textContent.trim();
+    
+    // Don't copy if it's the "Kopiert!" message
+    if (email === 'Kopiert!') {
+        return;
+    }
+    
+    navigator.clipboard.writeText(email).then(function() {
+        // Show a temporary confirmation message
+        const originalText = emailElement.textContent;
+        emailElement.textContent = 'Kopiert!';
+        setTimeout(function() {
+            emailElement.textContent = originalText;
+        }, 1500);
+    }).catch(function(err) {
+        console.error('Failed to copy email: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = email;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            const originalText = emailElement.textContent;
+            emailElement.textContent = 'Kopiert!';
+            setTimeout(function() {
+                emailElement.textContent = originalText;
+            }, 1500);
+        } catch (err) {
+            console.error('Fallback copy failed: ', err);
+        }
+        document.body.removeChild(textArea);
+    });
+}

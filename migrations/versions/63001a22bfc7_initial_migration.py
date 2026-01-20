@@ -1,8 +1,8 @@
-"""redo 
+"""Initial migration
 
-Revision ID: faaddd275cbd
+Revision ID: 63001a22bfc7
 Revises: 
-Create Date: 2025-12-17 09:53:20.517064
+Create Date: 2026-01-20 22:13:29.255439
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'faaddd275cbd'
+revision = '63001a22bfc7'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -40,11 +40,14 @@ def upgrade():
     sa.Column('challenge_date', sa.Date(), nullable=True),
     sa.Column('response_date', sa.Date(), nullable=True),
     sa.Column('deadline_date', sa.Date(), nullable=True),
+    sa.Column('proposed_date', sa.Date(), nullable=True),
     sa.Column('status', sa.Enum('pending', 'accepted', 'rejected', 'completed', 'expired', name='statusenum'), nullable=True),
     sa.Column('challenger_date_confirmed', sa.Boolean(), nullable=True),
     sa.Column('challenged_date_confirmed', sa.Boolean(), nullable=True),
     sa.Column('challenger_wants_cancel', sa.Boolean(), nullable=True),
     sa.Column('challenged_wants_cancel', sa.Boolean(), nullable=True),
+    sa.Column('challenger_result_confirmed', sa.Boolean(), nullable=True),
+    sa.Column('challenged_result_confirmed', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['FK_challenged_id'], ['t_player.uid'], ),
     sa.ForeignKeyConstraint(['FK_challenger_id'], ['t_player.uid'], ),
     sa.PrimaryKeyConstraint('challenge_id')
@@ -52,6 +55,7 @@ def upgrade():
     op.create_table('t_match',
     sa.Column('match_id', sa.Integer(), nullable=False),
     sa.Column('result', sa.String(length=3), nullable=True),
+    sa.Column('match_date', sa.Date(), nullable=True),
     sa.Column('FK_challenge_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['FK_challenge_id'], ['t_challenge.challenge_id'], ),
     sa.PrimaryKeyConstraint('match_id')

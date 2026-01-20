@@ -180,6 +180,29 @@ main{
     max-width: 200px; /* Sie-Menu-Width beachten */
     text-overflow: ellipsis;
 }
+.email-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    max-width: 200px;
+    transition: all 0.2s ease;
+}
+.email-container .copy-icon {
+    width: 1rem;
+    height: 1rem;
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    flex-shrink: 0;
+}
+.email-container:hover .copy-icon {
+    opacity: 1;
+}
+.email-container:hover #player-email {
+    max-width: calc(200px - 1rem - 6px);
+}
 .side-menu .rules-container p{
     color: var(--bg-color);
     font-size: 1rem;
@@ -322,7 +345,7 @@ main{
     width: auto;
     margin-bottom: calc(var(--space) / 2);
 
-    transition: stroke 0.3s ease;
+    transition: stroke 0.3s ease, fill 0.3s ease;
     stroke: var(--fg-color);
 }
 .pyramide .menu svg:hover{
@@ -331,6 +354,63 @@ main{
 }
 .pyramide .menu svg.active{
     stroke: var(--hl1-color);
+}
+.pyramide .menu svg#challenges path{
+    fill: var(--fg-color);
+    stroke: var(--fg-color);
+    transition: fill 0.3s ease, stroke 0.3s ease;
+}
+.pyramide .menu svg#challenges:hover path{
+    fill: var(--hl1-color);
+    stroke: var(--hl1-color);
+}
+.pyramide .menu svg#challenges.active path{
+    fill: var(--hl1-color);
+    stroke: var(--hl1-color);
+}
+.legend {
+    position: absolute;
+
+    top: calc(var(--space) * 2 + 4px);
+    margin: calc(var(--space) / 2);
+
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--space) / 3);
+    z-index: 10;
+    width: max-content;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--space) / 3);
+}
+.legend-box {
+    width: calc(var(--space) * 0.8);
+    height: calc(var(--space) * 0.6);
+    border: 4px solid var(--fg-color);
+    flex-shrink: 0;
+}
+.legend-box-default {
+    background-color: transparent;
+}
+.legend-box-selected {
+    background-color: var(--hl2-color);
+}
+.legend-box-hover {
+    background-color: var(--hl1-color);
+}
+.legend-box-parent {
+    background-color: var(--hl3-color);
+}
+.legend-box-challenge {
+    background-color: var(--hl4-color);
+}
+.legend-item span {
+    color: var(--fg-color);
+    font-size: 0.9rem;
+    font-weight: 400;
+    white-space: nowrap;
 }
 .option-container{
     width: calc(100% - var(--space) * 2);

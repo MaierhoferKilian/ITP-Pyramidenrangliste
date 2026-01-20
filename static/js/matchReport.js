@@ -17,21 +17,22 @@ function loadMatchHistory() {
                     const matchDiv = document.createElement('div');
                     matchDiv.style.marginBottom = '20px';
                     matchDiv.style.paddingBottom = '20px';
-                    matchDiv.style.borderBottom = '1px solid #ddd';
+                    matchDiv.style.borderBottom = '1px solid var(--bg-color)';
+                    matchDiv.style.color = 'var(--bg-color)';
                     
                     matchDiv.innerHTML = `
-                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">${match.date}</div>
+                        <div style="font-size: 0.9em; color: var(--bg-color); margin-bottom: 5px;">${match.date}</div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="flex: 1; text-align: left;">
-                                <div style="font-weight: bold; font-size: 0.9em;">CHALLENGER</div>
-                                <div>${match.challenger}</div>
+                                <div style="font-weight: bold; font-size: 0.9em; color: var(--bg-color);">CHALLENGER</div>
+                                <div style="color: var(--bg-color);">${match.challenger}</div>
                             </div>
-                            <div style="font-weight: 900; font-size: 1.5em; padding: 0 15px; letter-spacing: 2px;">
+                            <div style="font-weight: 900; font-size: 1.5em; padding: 0 15px; letter-spacing: 2px; color: var(--bg-color);">
                                 ${match.result}
                             </div>
                             <div style="flex: 1; text-align: right;">
-                                <div style="font-weight: bold; font-size: 0.9em;">CHALLENGED</div>
-                                <div>${match.challenged}</div>
+                                <div style="font-weight: bold; font-size: 0.9em; color: var(--bg-color);">CHALLENGED</div>
+                                <div style="color: var(--bg-color);">${match.challenged}</div>
                             </div>
                         </div>
                     `;
