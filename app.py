@@ -66,6 +66,7 @@ class Challenge(db.Model):
     challenge_date = db.Column(db.Date)
     response_date = db.Column(db.Date)
     deadline_date = db.Column(db.Date)
+    proposed_date = db.Column(db.Date)
     status = db.Column(db.Enum(StatusEnum), default=StatusEnum.pending)
     challenger_date_confirmed = db.Column(db.Boolean, default=True)
     challenged_date_confirmed = db.Column(db.Boolean, default=False)
@@ -89,6 +90,7 @@ class Match(db.Model):
     
     match_id = db.Column(db.Integer, primary_key=True)
     result = db.Column(db.String(3))
+    match_date = db.Column(db.Date)
     FK_challenge_id = db.Column(db.Integer, db.ForeignKey('t_challenge.challenge_id'), nullable=False)
     
     def __repr__(self):
@@ -263,6 +265,69 @@ def cleanup_inactive_players():
         print(f"Error cleaning up inactive players: {str(e)}")
         db.session.rollback()
 
+def check_expired_challenges():
+    """Check for challenges that have passed their deadline"""
+    try:
+        # Don't expire challenges during vacation periods? 
+        # Requirement doesn't specify, but assuming consistent behavior with cleanup
+        if is_vacation_period(datetime.utcnow().date()):
+            return
+            
+        today = datetime.utcnow().date()
+        
+        # Find active challenges past deadline
+        expired_challenges = Challenge.query.filter(
+            Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted]),
+            Challenge.deadline_date < today
+        ).all()
+        
+        for challenge in expired_challenges:
+            print(f"Expiring challenge {challenge.challenge_id}")
+            # Ensure match exists
+            match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
+            if not match:
+                match = Match(FK_challenge_id=challenge.challenge_id)
+                db.session.add(match)
+            
+            # Set result 2:0 for challenger
+            match.result = "2:0"
+            match.match_date = challenge.deadline_date
+            challenge.status = StatusEnum.completed
+            
+            # Update Rankings (Challenger wins)
+            challenger = Player.query.get(challenge.FK_challenger_id)
+            challenged = Player.query.get(challenge.FK_challenged_id)
+            
+            if challenger and challenged:
+                challenger.total_wins += 1
+                challenged.total_losses += 1
+                
+                # Logic: Challenger takes position of Challenged, everyone else shifts down
+                if challenger.current_rank and challenged.current_rank and challenger.current_rank > challenged.current_rank:
+                    old_challenger_rank = challenger.current_rank
+                    target_rank = challenged.current_rank
+                    
+                    players_to_shift = Player.query.filter(
+                        Player.current_rank >= target_rank,
+                        Player.current_rank < old_challenger_rank
+                    ).all()
+                    
+                    for p in players_to_shift:
+                        p.current_rank += 1
+                        
+                    challenger.current_rank = target_rank
+                    
+                    if challenger.highest_rank is None or challenger.current_rank < challenger.highest_rank:
+                        challenger.highest_rank = challenger.current_rank
+                        
+        if expired_challenges:
+            db.session.commit()
+            print(f"Processed {len(expired_challenges)} expired challenges")
+            
+    except Exception as e:
+        print(f"Error processing expired challenges: {str(e)}")
+        db.session.rollback()
+
 def is_vacation_period(date):
     """Check if a date falls within vacation periods (July, August, Dec 24 - Jan 6)"""
     month = date.month
@@ -298,6 +363,7 @@ def index():
     
     # Clean up inactive players before displaying rankings
     cleanup_inactive_players()
+    check_expired_challenges()
     
     current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
     
@@ -452,7 +518,7 @@ def create_challenge():
             return jsonify({"error": "Sie können sich nicht selbst herausfordern"}), 400
         
         # Check if currently in vacation period
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         if is_vacation_period(today):
             next_available = get_next_available_date(today)
             return jsonify({
@@ -503,21 +569,25 @@ def create_challenge():
         if last_completed_challenge and last_completed_challenge.FK_challenger_id == current_player.uid and last_completed_challenge.FK_challenged_id == challenged_uid:
             return jsonify({"error": "Sie können denselben Spieler nicht zweimal hintereinander herausfordern"}), 400
         
-        # Parse match_date
-        deadline = None
+        # Parse match_date (proposed date)
+        proposed_match_date = None
         if match_date:
             try:
-                match_date_obj = datetime.strptime(match_date, "%Y-%m-%d").date()
-                deadline = match_date_obj
+                proposed_match_date = datetime.strptime(match_date, "%Y-%m-%d").date()
             except ValueError:
                 return jsonify({"error": "Ungültiges Datumsformat"}), 400
+                
+        # Calculate deadline (1 week from now)
+        challenge_date = datetime.utcnow().date()
+        deadline = challenge_date + timedelta(days=7)
         
         # Create new challenge
         new_challenge = Challenge(
             FK_challenger_id=current_player.uid,
             FK_challenged_id=challenged_uid,
-            challenge_date=datetime.utcnow().date(),
+            challenge_date=challenge_date,
             deadline_date=deadline,
+            proposed_date=proposed_match_date,
             status=StatusEnum.pending
         )
         
@@ -562,6 +632,9 @@ def get_my_challenges():
         challenged = Player.query.filter_by(uid=challenge.FK_challenged_id).first()
         match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
         if challenged:
+            # Determine display date (match date or proposed date)
+            display_date = match.match_date if match and match.match_date else challenge.proposed_date
+            
             challenges_data.append({
                 "challenge_id": challenge.challenge_id,
                 "role": "challenger",
@@ -571,6 +644,7 @@ def get_my_challenges():
                 "status": challenge.status.value,
                 "challenge_date": challenge.challenge_date.strftime("%d.%m.%Y") if challenge.challenge_date else "",
                 "deadline_date": challenge.deadline_date.strftime("%d.%m.%Y") if challenge.deadline_date else "",
+                "match_date": display_date.strftime("%d.%m.%Y") if display_date else "",
                 "challenger_date_confirmed": challenge.challenger_date_confirmed,
                 "challenged_date_confirmed": challenge.challenged_date_confirmed,
                 "challenger_wants_cancel": challenge.challenger_wants_cancel,
@@ -584,6 +658,9 @@ def get_my_challenges():
         challenger = Player.query.filter_by(uid=challenge.FK_challenger_id).first()
         match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
         if challenger:
+            # Determine display date (match date or proposed date)
+            display_date = match.match_date if match and match.match_date else challenge.proposed_date
+            
             challenges_data.append({
                 "challenge_id": challenge.challenge_id,
                 "role": "challenged",
@@ -593,6 +670,7 @@ def get_my_challenges():
                 "status": challenge.status.value,
                 "challenge_date": challenge.challenge_date.strftime("%d.%m.%Y") if challenge.challenge_date else "",
                 "deadline_date": challenge.deadline_date.strftime("%d.%m.%Y") if challenge.deadline_date else "",
+                "match_date": display_date.strftime("%d.%m.%Y") if display_date else "",
                 "challenger_date_confirmed": challenge.challenger_date_confirmed,
                 "challenged_date_confirmed": challenge.challenged_date_confirmed,
                 "challenger_wants_cancel": challenge.challenger_wants_cancel,
@@ -631,19 +709,29 @@ def accept_challenge():
         challenge.status = StatusEnum.accepted
         challenge.response_date = datetime.utcnow().date()
         
-        # Create match with null result
-        new_match = Match(
-            FK_challenge_id=challenge.challenge_id,
-            result=None
-        )
+        # Create match now that challenge is accepted
+        # Try to find existing match first (just in case)
+        match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
         
-        db.session.add(new_match)
+        if not match:
+            # Create new match with proposed date
+            match = Match(
+                FK_challenge_id=challenge.challenge_id,
+                match_date=challenge.proposed_date,
+                result=None
+            )
+            db.session.add(match)
+        else:
+             # Ensure match date is set from proposed if not already set
+             if not match.match_date and challenge.proposed_date:
+                 match.match_date = challenge.proposed_date
+        
         db.session.commit()
         
         return jsonify({
             "success": True,
-            "message": "Herausforderung akzeptiert und Match erstellt",
-            "match_id": new_match.match_id
+            "message": "Herausforderung akzeptiert",
+            "match_id": match.match_id
         })
         
     except Exception as e:
@@ -682,7 +770,14 @@ def update_challenge_date():
         # Parse and update the date
         try:
             new_date_obj = datetime.strptime(new_date, "%Y-%m-%d").date()
-            challenge.deadline_date = new_date_obj
+            
+            # Update proposed date on challenge
+            challenge.proposed_date = new_date_obj
+            
+            # If a match exists (shouldn't for pending, but for safety), update it too
+            match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
+            if match:
+                match.match_date = new_date_obj
             
             # Reset confirmation status - the person who changed it is confirmed, the other needs to confirm
             if challenge.FK_challenger_id == current_player.uid:
@@ -879,6 +974,10 @@ def submit_match_result():
         # Create match if it doesn't exist
         match = Match(FK_challenge_id=challenge.challenge_id)
         db.session.add(match)
+    
+    # Check if match date is reached
+    if match.match_date and match.match_date > datetime.now().date():
+         return jsonify({"error": "Das Match-Datum ist noch nicht erreicht."}), 400
     
     # Check if result is changing
     is_new_result = match.result != result_str

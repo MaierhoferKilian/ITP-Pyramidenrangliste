@@ -266,8 +266,12 @@ function displayChallenges(challenges) {
                     <h4>SPIELZEITPUNKT</h4>
                     ${challenge.status === 'pending' ? `<img onclick="document.getElementById('match-date-picker-${challenge.challenge_id}').showPicker()" style="cursor: pointer;" src="/static/images/calendar.svg" alt="Calendar Image">` : ''}
                 </div>
-                <p id="match-date-display-${challenge.challenge_id}">${challenge.deadline_date || 'Kein Datum'}</p>
-                ${challenge.status === 'pending' ? `<input type="date" id="match-date-picker-${challenge.challenge_id}" style="display: none;" value="${challenge.deadline_date ? challenge.deadline_date.split('.').reverse().join('-') : ''}" onchange="updateChallengeDate(${challenge.challenge_id}, this.value)">` : ''}
+                <!-- Show Match Date as main date -->
+                <p id="match-date-display-${challenge.challenge_id}">${challenge.match_date || 'Kein Datum'}</p>
+                <!-- Show Deadline for info -->
+                <p style="font-size: 0.8em; color: var(--hl2-color); margin-bottom: 5px;">Deadline: ${challenge.deadline_date || '-'}</p>
+                
+                ${challenge.status === 'pending' ? `<input type="date" id="match-date-picker-${challenge.challenge_id}" style="display: none;" value="${challenge.match_date ? challenge.match_date.split('.').reverse().join('-') : ''}" onchange="updateChallengeDate(${challenge.challenge_id}, this.value)">` : ''}
                 <div class="approve-container" style="margin-top: calc(var(--space) / 2);">
                     <div class="approve-container-one">
                         <div class="approve-container-two">
@@ -290,7 +294,7 @@ function displayChallenges(challenges) {
                 <p style="margin-top: calc(var(--space) / 2);">Status: ${statusText}</p>
                 ${(function(){
                     if (challenge.status === 'accepted' && challenge.challenge_date) {
-                        const parts = challenge.deadline_date ? challenge.deadline_date.split('.') : null;
+                        const parts = challenge.match_date ? challenge.match_date.split('.') : null;
                         if (parts && parts.length === 3) {
                             const matchDate = new Date(parts[2], parts[1] - 1, parts[0]);
                             const today = new Date();
@@ -397,6 +401,7 @@ function updateChallengeDate(challengeId, dateValue) {
     const dateParts = dateValue.split('-');
     const formattedDate = `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}`;
     
+    // Optimistic UI update
     const displayElement = document.getElementById(`match-date-display-${challengeId}`);
     if (displayElement) {
         displayElement.textContent = formattedDate;
