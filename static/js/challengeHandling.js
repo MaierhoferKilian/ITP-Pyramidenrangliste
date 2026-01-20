@@ -469,8 +469,10 @@ function toggleCancelChallenge(challengeId, wantsCancel) {
         if (data.success) {
             if (data.cancelled) {
                 alert(data.message);
+                location.reload();
+            } else {
+                loadMyChallenges();
             }
-            loadMyChallenges();
         } else {
             alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
         }
