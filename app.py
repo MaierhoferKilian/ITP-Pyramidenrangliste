@@ -914,11 +914,24 @@ def submit_match_result():
                         challenger.total_wins += 1
                         challenged.total_losses += 1
                         
-                        # Swap ranks if challenger won against someone with better rank (lower number)
+                        # Logic: Challenger takes position of Challenged, everyone else shifts down
                         if challenger.current_rank and challenged.current_rank and challenger.current_rank > challenged.current_rank:
-                            temp_rank = challenger.current_rank
-                            challenger.current_rank = challenged.current_rank
-                            challenged.current_rank = temp_rank
+                            old_challenger_rank = challenger.current_rank
+                            target_rank = challenged.current_rank
+                            
+                            # Get all players who need to shift down (including the challenged player)
+                            # Range is [target_rank, old_challenger_rank)
+                            players_to_shift = Player.query.filter(
+                                Player.current_rank >= target_rank,
+                                Player.current_rank < old_challenger_rank
+                            ).all()
+                            
+                            # Shift them down by 1
+                            for p in players_to_shift:
+                                p.current_rank += 1
+                                
+                            # Move challenger to the target rank
+                            challenger.current_rank = target_rank
                             
                             # Update highest rank
                             if challenger.highest_rank is None or challenger.current_rank < challenger.highest_rank:
