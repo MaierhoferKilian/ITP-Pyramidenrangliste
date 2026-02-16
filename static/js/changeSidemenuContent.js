@@ -1,7 +1,14 @@
-// Track the last active menu
+// Track the last active menu and whether it's currently open on mobile
 let lastActiveMenu = 'user';
+let mobileMenuOpen = false;
 
-function getMenu(menuType){
+function getMenu(menuType, skipChallengeReset){
+    // On mobile, if the same menu icon is clicked again, close it (toggle)
+    if (window.innerWidth <= 1031.534 && mobileMenuOpen && lastActiveMenu === menuType) {
+        closeMenu();
+        return;
+    }
+
     document.getElementById("sm-user").style.display="none";
     document.getElementById("sm-rules").style.display="none";
     document.getElementById("sm-player").style.display="none";
@@ -15,9 +22,22 @@ function getMenu(menuType){
     document.getElementById("sm-challenge").classList.remove("mobile-active");
     document.getElementById("sm-history").classList.remove("mobile-active");
     
+    // Remove active from pyramid menu icons
     document.getElementById("rules").classList.remove("active");
     document.getElementById("user").classList.remove("active");
     document.getElementById("report").classList.remove("active");
+
+    // Remove active from header nav icons
+    document.querySelectorAll('.header-nav .nav-icon').forEach(function(icon) {
+        icon.classList.remove('active');
+    });
+
+    // Reset challenge state whenever navigating away from challenge menu
+    if (menuType !== 'challenge' && !skipChallengeReset) {
+        if (typeof resetChallengeState === 'function') {
+            resetChallengeState();
+        }
+    }
 
     const vacationContainer = document.getElementById('vacation-warning-sidemenu');
     if (vacationContainer) {
@@ -38,12 +58,14 @@ function getMenu(menuType){
         document.getElementById("sm-rules").style.display="block";
         document.getElementById("sm-rules").classList.add("mobile-active");
         document.getElementById("rules").classList.add("active");
+        activateNavIcon('rules');
         lastActiveMenu = 'rules';
     }
     else if (menuType==="history"){
         document.getElementById("sm-history").style.display="block";
         document.getElementById("sm-history").classList.add("mobile-active");
         document.getElementById("report").classList.add("active");
+        activateNavIcon('history');
         lastActiveMenu = 'history';
         if (typeof loadMatchHistory === 'function') {
             loadMatchHistory();
@@ -58,6 +80,7 @@ function getMenu(menuType){
         document.getElementById("sm-user").style.display="block";
         document.getElementById("sm-user").classList.add("mobile-active");
         document.getElementById("user").classList.add("active");
+        activateNavIcon('user');
         lastActiveMenu = 'user';
     }
     else if (menuType==="challenge"){
@@ -73,6 +96,13 @@ function getMenu(menuType){
         const challengeCreationForm = document.getElementById('challenge-creation-form');
         if (challengeCreationForm) {
             challengeCreationForm.style.display = 'block';
+        }
+        
+        // Show mobile challenge button container
+        const mobileChallengeBtn = document.getElementById('mobile-challenge-btn');
+        if (mobileChallengeBtn) {
+            mobileChallengeBtn.style.display = '';
+            mobileChallengeBtn.parentElement.style.display = '';
         }
         
         // Clear any existing active challenges from view
@@ -91,6 +121,7 @@ function getMenu(menuType){
     }
     else if (menuType==="challenges"){
         document.getElementById("sm-challenge").style.display="block";
+        document.getElementById("sm-challenge").classList.add("mobile-active");
         
         // Hide challenge creation form when viewing existing challenges
         const challengeCreationForm = document.getElementById('challenge-creation-form');
@@ -98,48 +129,69 @@ function getMenu(menuType){
             challengeCreationForm.style.display = 'none';
         }
         
+        // Hide mobile challenge button when viewing existing challenges
+        const mobileBtn = document.getElementById('mobile-challenge-btn');
+        if (mobileBtn) {
+            mobileBtn.style.display = 'none';
+        }
+        const mobileBtnContainer = mobileBtn ? mobileBtn.parentElement : null;
+        if (mobileBtnContainer) {
+            mobileBtnContainer.style.display = 'none';
+        }
+        
         // Load and display all challenges
         if (typeof loadMyChallenges === 'function') {
             loadMyChallenges();
         }
+        activateNavIcon('challenges');
+        lastActiveMenu = 'challenges';
     }
     
     // Add menu-open class to body on mobile
     if (window.innerWidth <= 1031.534) {
         document.body.classList.add('menu-open');
+        mobileMenuOpen = true;
+    }
+}
+
+// Activate the matching header-nav icon
+function activateNavIcon(menuType) {
+    var icon = document.querySelector('.header-nav .nav-icon[data-menu="' + menuType + '"]');
+    if (icon) {
+        icon.classList.add('active');
     }
 }
 
 function closeMenu() {
-    console.log('closeMenu called');
-    
     // Remove mobile-active from all menus
-    document.querySelectorAll('.side-menu').forEach(menu => {
+    document.querySelectorAll('.side-menu').forEach(function(menu) {
         menu.classList.remove('mobile-active');
-        console.log('Removed mobile-active from:', menu.id);
     });
     
-    // Remove menu-open class from body immediately
+    // Remove menu-open class from body
     document.body.classList.remove('menu-open');
-    console.log('Removed menu-open from body');
+    mobileMenuOpen = false;
     
     // On mobile, hide all menus after transition
     if (window.innerWidth <= 1031.534) {
-        setTimeout(() => {
+        setTimeout(function() {
             document.getElementById("sm-user").style.display="none";
             document.getElementById("sm-rules").style.display="none";
             document.getElementById("sm-player").style.display="none";
             document.getElementById("sm-challenge").style.display="none";
             document.getElementById("sm-history").style.display="none";
-            console.log('Set all menus to display none');
-        }, 300); // Match the CSS transition duration
+        }, 300);
     }
     
-    // Also remove active states from menu icons
+    // Remove active states from pyramid menu icons
     document.getElementById("rules").classList.remove("active");
     document.getElementById("user").classList.remove("active");
     document.getElementById("report").classList.remove("active");
-    console.log('closeMenu completed');
+
+    // Remove active states from header nav icons
+    document.querySelectorAll('.header-nav .nav-icon').forEach(function(icon) {
+        icon.classList.remove('active');
+    });
 }
 
 function openLastActiveMenu() {

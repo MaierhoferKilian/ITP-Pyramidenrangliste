@@ -362,12 +362,14 @@ function selectCell(id, rectElement, globalPosition) {
     // Show/hide challenge button
     const challengeButton = document.querySelector(".ball");
     const hasActiveChallenge = typeof HAS_ACTIVE_CHALLENGE !== 'undefined' ? HAS_ACTIVE_CHALLENGE : false;
+    const mobilePlayerChallengeBtn = document.getElementById('mobile-player-challenge-btn');
 
     if (challengeButton) {
       // Check if player is trying to challenge themselves
       if (globalPosition === SPECIAL_POSITION) {
         // Player selected themselves - hide challenge button
         challengeButton.style.display = "none";
+        if (mobilePlayerChallengeBtn) mobilePlayerChallengeBtn.style.display = 'none';
       } else if (isChallengeable(globalPosition) && !hasActiveChallenge) {
         // Player can challenge this position AND has no active challenge
         challengeButton.style.display = "flex";
@@ -375,9 +377,11 @@ function selectCell(id, rectElement, globalPosition) {
         setTimeout(() => {
           challengeButton.style.animation = "shake 0.5s";
         }, 10);
+        if (mobilePlayerChallengeBtn) mobilePlayerChallengeBtn.style.display = 'block';
       } else {
         // Position is not challengeable or player has active challenge
         challengeButton.style.display = "none";
+        if (mobilePlayerChallengeBtn) mobilePlayerChallengeBtn.style.display = 'none';
       }
     }
 

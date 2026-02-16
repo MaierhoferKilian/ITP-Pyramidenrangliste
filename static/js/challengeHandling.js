@@ -3,6 +3,48 @@ let isChallengeConfirmed = false;
 let isCancelChallengerConfirmed = false;
 let isCancelChallengedConfirmed = false;
 
+function resetChallengeState() {
+    // Reset confirmation flags
+    isChallengeConfirmed = false;
+    isChallengerConfirmed = false;
+    isCancelChallengerConfirmed = false;
+    isCancelChallengedConfirmed = false;
+
+    // Reset ball button text back to "HERAUS FORDERN"
+    const buttonText = document.getElementById('challenge-button-text');
+    if (buttonText) {
+        buttonText.textContent = 'HERAUS FORDERN';
+    }
+
+    // Reset challenger status display
+    setChallengerStatus(false);
+
+    // Reset cancel statuses
+    setCancelChallengerStatus(false);
+
+    // Reset date picker and display
+    const matchDatePicker = document.getElementById('match-date-picker');
+    if (matchDatePicker) {
+        matchDatePicker.value = '';
+    }
+    const matchDateDisplay = document.getElementById('match-date-display');
+    if (matchDateDisplay) {
+        matchDateDisplay.textContent = 'Datum wählen';
+    }
+
+    // Reset challenged player name
+    const challengedName = document.getElementById('challenged-player-name');
+    if (challengedName) {
+        challengedName.textContent = 'xxx';
+    }
+
+    // Reset mobile challenge button
+    const mobileBtn = document.getElementById('mobile-challenge-btn');
+    if (mobileBtn) {
+        mobileBtn.textContent = 'HERAUSFORDERN';
+    }
+}
+
 function updateMatchDate(dateValue) {
     if (dateValue) {
         // Convert YYYY-MM-DD to DD.MM.YYYY
@@ -100,17 +142,24 @@ function challengePlayer() {
                 }
                 
                 // No active challenges, proceed with challenge creation
+                // Open challenge menu (skip reset since we set state right after)
+                getMenu('challenge', true);
+                
+                // Set confirmed state
                 buttonText.textContent = 'BESTÄTIGEN';
                 isChallengeConfirmed = true;
+                
+                // Also update mobile button
+                const mobileBtn = document.getElementById('mobile-challenge-btn');
+                if (mobileBtn) {
+                    mobileBtn.textContent = 'BESTÄTIGEN';
+                }
                 
                 // Trigger shake animation
                 challengeButton.style.animation = 'none';
                 setTimeout(() => {
                     challengeButton.style.animation = 'shake 0.5s';
                 }, 10);
-                
-                // Open challenge menu
-                getMenu('challenge');
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -174,6 +223,11 @@ function loadMyChallenges() {
                 if (challengesIcon) {
                     challengesIcon.style.display = 'block';
                 }
+                // Also show header nav challenges icon
+                const navChallenges = document.querySelector('.header-nav .nav-challenges');
+                if (navChallenges) {
+                    navChallenges.style.display = '';
+                }
                 
                 // Store challenges data
                 window.myChallenges = data.challenges;
@@ -185,6 +239,11 @@ function loadMyChallenges() {
                 const challengesIcon = document.getElementById('challenges');
                 if (challengesIcon) {
                     challengesIcon.style.display = 'none';
+                }
+                // Also hide header nav challenges icon
+                const navChallenges = document.querySelector('.header-nav .nav-challenges');
+                if (navChallenges) {
+                    navChallenges.style.display = 'none';
                 }
                 window.myChallenges = [];
                 
@@ -225,12 +284,14 @@ function displayChallenges(challenges) {
     }
     
     // Display each challenge
-    challenges.forEach(challenge => {
+    challenges.forEach((challenge, index) => {
         const challengeDiv = document.createElement('div');
         challengeDiv.className = 'active-challenge challenge-headline-container';
         challengeDiv.style.marginBottom = 'var(--space)';
-        challengeDiv.style.paddingBottom = 'var(--space)';
-        challengeDiv.style.borderBottom = '2px solid var(--bg-color)';
+        if (index < challenges.length - 1) {
+            challengeDiv.style.paddingBottom = 'var(--space)';
+            challengeDiv.style.borderBottom = '2px solid var(--bg-color)';
+        }
         
         const statusText = challenge.status === 'pending' ? 'Ausstehend' : 'Akzeptiert';
         const challengerRank = challenge.role === 'challenger' ? challenge.challenger_rank : challenge.opponent_rank;

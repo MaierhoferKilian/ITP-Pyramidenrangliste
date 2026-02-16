@@ -58,6 +58,8 @@ header{
     justify-content: space-between;
     align-items: center;
     border-bottom: 4px solid var(--fg-color);
+    background-color: var(--bg-color);
+    z-index: 100;
 }
 header img{
     margin-left: var(--space);
@@ -84,6 +86,7 @@ main{
     justify-content: space-between;
 }
 .side-menu{
+    position: relative;
     background-color: var(--hl1-color);
     width: calc(443.767px + 2 * var(--space)); /*Header h1 Width*/
     height: calc(100vh - ((var(--space) * 2 + 4px)));
@@ -519,13 +522,111 @@ svg {
     opacity: 1;
 }
 
+/* Close button inside side-menu (hidden on desktop) */
+.close-menu-btn {
+    display: none;
+}
+
+/* Mobile challenge button (hidden on desktop) */
+.mobile-challenge-btn-container {
+    display: none;
+}
+
+/* Header nav icons (hidden on desktop) */
+.header-nav {
+    display: none;
+}
+
 @media (max-width: 1031.534px){
-    /* Mobile: Hide side menu by default, show pyramid */
+    :root {
+        --space: 20px;
+    }
+
+    html {
+        font-size: 13px;
+    }
+
+    /* Header */
+    header h1 {
+        display: none;
+    }
+
+    header #menu,
+    header #menu-close {
+        display: none !important;
+    }
+
+    .header-nav {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--space) * 0.7);
+        margin-right: var(--space);
+    }
+
+    .header-nav .nav-icon {
+        height: 1.4rem;
+        width: 1.4rem;
+        cursor: pointer;
+        stroke: var(--fg-color);
+        transition: stroke 0.3s ease, fill 0.3s ease;
+        touch-action: auto;
+        pointer-events: auto;
+    }
+
+    .header-nav .nav-icon:hover,
+    .header-nav .nav-icon.active {
+        stroke: var(--hl1-color);
+    }
+
+    .header-nav .nav-challenges path {
+        fill: var(--fg-color);
+        stroke: var(--fg-color);
+        transition: fill 0.3s ease, stroke 0.3s ease;
+    }
+
+    .header-nav .nav-challenges:hover path,
+    .header-nav .nav-challenges.active path {
+        fill: var(--hl1-color);
+        stroke: var(--hl1-color);
+    }
+
+    /* Main layout */
     main {
         position: relative;
     }
-    
-    .side-menu{
+
+    /* Pyramid takes full width */
+    .pyramide {
+        width: 100vw;
+        position: relative;
+        z-index: 1;
+    }
+
+    .pyramide .ball {
+        right: calc(var(--space) / 2);
+    }
+
+    /* Hide the pyramid-level menu icons on mobile (they're in the header now) */
+    .pyramide .menu {
+        display: none;
+    }
+
+    /* Legend smaller on mobile */
+    .legend-item span {
+        font-size: 0.75rem;
+    }
+    .legend-box {
+        width: calc(var(--space) * 0.6);
+        height: calc(var(--space) * 0.45);
+        border-width: 2px;
+    }
+    .legend {
+        gap: calc(var(--space) / 4);
+        top: 0;
+    }
+
+    /* Side menu: overlays on top of pyramid */
+    .side-menu {
         position: fixed;
         top: calc(var(--space) * 2 + 4px);
         left: 0;
@@ -535,60 +636,155 @@ svg {
         transform: translateX(100%);
         transition: transform 0.3s ease;
         pointer-events: none;
+        display: flex !important;
+        flex-direction: column;
     }
-    
-    /* When side menu is active, slide it in */
+
     .side-menu.mobile-active {
         transform: translateX(0);
         pointer-events: auto;
     }
-    
-    /* Hide pyramid when side menu is active */
-    body.menu-open .pyramide {
-        visibility: hidden;
-        pointer-events: none;
-    }
-    
-    .pyramide{
-        width: 100vw;
-        position: relative;
-        z-index: 1;
-        visibility: visible;
-        pointer-events: auto;
+
+    /* Make internal containers flex-friendly */
+    .side-menu .challenge-container {
+        height: auto;
+        flex: 1;
+        min-height: 0;
     }
 
-    .pyramide .ball{
-        right: calc(var(--space) / 2);
-    }
-    .pyramide .menu{
-        right: calc(var(--space) / 2);
+    .side-menu .rules-container {
+        flex: 1;
+        min-height: 0;
+        height: auto;
     }
 
-    header h1{
-        display: none;
+    .side-menu .table-container {
+        flex: 1;
+        min-height: 0;
+        height: auto;
     }
-    
-    header #menu{
+
+    /* Close button visible on mobile */
+    .close-menu-btn {
         display: block;
-        z-index: 2000;
+        position: absolute;
+        top: calc(var(--space) * 0.75);
+        right: calc(var(--space) * 0.75);
+        width: 22px;
+        height: 22px;
         cursor: pointer;
+        z-index: 10;
+    }
+
+    /* Side-menu headline */
+    .side-menu .headline-container {
         position: relative;
+        height: auto;
+        padding: var(--space);
+        padding-right: calc(var(--space) + 30px);
     }
-    
-    header #menu-close{
-        display: none;
-        z-index: 2000;
-        cursor: pointer;
+
+    .side-menu .headline-container h2 {
+        font-size: 1.4rem;
+        width: 100%;
+    }
+
+    /* Side-menu table (player stats) */
+    .side-menu .table-container h3 {
+        font-size: 1.4rem;
+        margin-bottom: calc(var(--space) * 0.75);
+    }
+
+    .side-menu .table-container h4 {
+        font-size: 0.8rem;
+        margin-bottom: calc(var(--space) / 3);
+        max-width: 140px;
+    }
+
+    .side-menu .table-container p {
+        font-size: 0.8rem;
+        max-width: 140px;
+    }
+
+    /* Side-menu rules */
+    .side-menu .rules-container h4 {
+        font-size: 0.85rem;
+    }
+
+    .side-menu .rules-container p {
+        font-size: 0.85rem;
+    }
+
+    .side-menu .rules-container a {
+        font-size: 0.85rem;
+    }
+
+    /* Side-menu challenge */
+    .side-menu .challenge-headline h4 {
+        font-size: 0.85rem;
+    }
+
+    .side-menu .challenge-headline-container p {
+        font-size: 0.85rem;
+    }
+
+    .challenge-status {
+        font-size: 0.85rem;
+    }
+
+    /* Options container (user menu buttons) */
+    .options-container h4 {
+        font-size: 0.85rem;
+    }
+
+    .option-container {
+        width: calc(100% - var(--space) * 2);
+    }
+
+    /* Ball (challenge button) - hidden on mobile when menu is open */
+    .pyramide .ball {
+        width: calc(3 * var(--space));
+        height: calc(3 * var(--space));
+    }
+
+    .pyramide .ball p {
+        font-size: 0.5rem;
+        line-height: 1;
+    }
+
+    /* Mobile challenge button inside side menu */
+    .mobile-challenge-btn-container {
+        display: flex;
+        justify-content: center;
+        padding: var(--space);
+        flex-shrink: 0;
         position: relative;
+        z-index: 5;
     }
-    
-    /* Show close button when menu is open */
-    body.menu-open header #menu {
-        display: none;
-    }
-    
-    body.menu-open header #menu-close {
-        display: block;
+
+    #mobile-challenge-btn,
+    #mobile-player-challenge-btn {
+        width: 100%;
+        padding: calc(var(--space) * 0.6) var(--space);
+        background: radial-gradient(circle at 50% 20%, #f7f1e3 20%, #d1ccc0 100%);
+        border: 4px solid var(--fg-color);
+        color: var(--fg-color);
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
         cursor: pointer;
+        letter-spacing: 0.05em;
+        transition: background 0.2s ease;
+        outline: none;
+        box-shadow: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        border-radius: 0;
+    }
+
+    #mobile-challenge-btn:active,
+    #mobile-player-challenge-btn:active {
+        background: radial-gradient(circle at 50% 20%, #e8e2d4 20%, #c2bdb1 100%);
     }
 }
