@@ -4,6 +4,8 @@ from app_config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_PATH, SCOPE
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import enum
+import hashlib
+import random
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -417,10 +419,65 @@ def selected_player():
         })
     return jsonify({"error": "Player not found"}), 404
 
+# ===== FAKE LOGIN (kein Microsoft-Domain nötig) =====
+
+def _generate_uid(email):
+    """Erzeugt eine deterministische UID aus der Email (gleiche Email = gleicher User)"""
+    return hashlib.sha256(email.lower().strip().encode()).hexdigest()[:32]
+
+def _extract_user_info(email):
+    """Extrahiert realistischen Vor-/Nachnamen und generiert eine Klasse aus der Email.
+    Erwartet Format: vorname.nachname@domain oder vorname@domain"""
+    local_part = email.split('@')[0]  # z.B. 'max.mustermann'
+    parts = local_part.split('.')
+    
+    firstname = parts[0].capitalize() if parts else 'Unbekannt'
+    lastname = parts[1].capitalize() if len(parts) > 1 else ''
+    
+    # Realistische HTL-Klasse generieren (deterministisch basierend auf Email)
+    random.seed(email.lower())  # Deterministisch: gleiche Email = gleiche Klasse
+    year = random.choice(['1', '2', '3', '4', '5'])
+    dept = random.choice(['AHIT', 'BHIT', 'AHEL', 'BHEL', 'AHME'])
+    class_ = f"{year}{dept}"
+    random.seed()  # Seed zurücksetzen
+    
+    return firstname, lastname, class_
+
 @app.route("/login")
 def login():
-    auth_url = _build_auth_url()
-    return redirect(auth_url)
+    # Zeige Fake-Login-Seite statt Microsoft-Redirect
+    return render_template("login.html")
+
+@app.route("/fake_login", methods=["POST"])
+def fake_login():
+    email = request.form.get("email", "").strip().lower()
+    
+    if not email or '@' not in email:
+        return render_template("login.html", error="Bitte eine gültige Email-Adresse eingeben.")
+    
+    uid = _generate_uid(email)
+    firstname, lastname, class_ = _extract_user_info(email)
+    
+    # Fake id_token_claims und graph_data erstellen (wie Microsoft es liefern würde)
+    fake_claims = {
+        "oid": uid,
+        "preferred_username": email,
+        "name": f"{firstname} {lastname}".strip(),
+    }
+    fake_graph_data = {
+        "mail": email,
+        "givenName": firstname,
+        "surname": lastname,
+        "jobTitle": class_,  # jobTitle wird als Klasse verwendet
+    }
+    
+    # Spieler in DB anlegen/aktualisieren (nutzt die bestehende Funktion)
+    create_or_update_player(fake_claims, fake_graph_data)
+    
+    # Session setzen (gleiche Struktur wie bei echtem Microsoft-Login)
+    session["user"] = fake_claims
+    
+    return redirect(url_for("index"))
 
 @app.route("/join_ranking", methods=["POST"])
 def join_ranking():
@@ -914,9 +971,8 @@ def logout():
     # Clear the session
     session.clear()
     
-    # Redirect to Microsoft logout endpoint
-    logout_url = f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri=http://localhost:5000/login"
-    return redirect(logout_url)
+    # Direkt zur Login-Seite (kein Microsoft-Logout nötig)
+    return redirect(url_for("login"))
 
 @app.route(REDIRECT_PATH)
 def authorized():
