@@ -323,16 +323,14 @@ function displayChallenges(challenges) {
                 <p>${challenge.role === 'challenged' ? 'Sie' : challenge.opponent_name} (#${challengedRank})</p>
             </div>
             <div class="challenge-headline-container" style="margin-top: var(--space);">
-                <div class="challenge-headline">
+                <div class="challenge-headline" style="position: relative;">
                     <h4>SPIELZEITPUNKT</h4>
-                    ${challenge.status === 'pending' ? `<img onclick="document.getElementById('match-date-picker-${challenge.challenge_id}').showPicker()" style="cursor: pointer;" src="/static/images/calendar.svg" alt="Calendar Image">` : ''}
+                    ${challenge.status === 'pending' ? `<img style="cursor: pointer;" src="/static/images/calendar.svg" alt="Calendar Image"><input type="date" id="match-date-picker-${challenge.challenge_id}" class="date-picker-overlay" value="${challenge.match_date ? challenge.match_date.split('.').reverse().join('-') : ''}" onchange="updateChallengeDate(${challenge.challenge_id}, this.value)">` : ''}
                 </div>
                 <!-- Show Match Date as main date -->
                 <p id="match-date-display-${challenge.challenge_id}">${challenge.match_date || 'Kein Datum'}</p>
                 <!-- Show Deadline for info -->
                 <p style="font-size: 0.8em; color: var(--hl2-color); margin-bottom: 5px;">Deadline: ${challenge.deadline_date || '-'}</p>
-                
-                ${challenge.status === 'pending' ? `<input type="date" id="match-date-picker-${challenge.challenge_id}" style="display: none;" value="${challenge.match_date ? challenge.match_date.split('.').reverse().join('-') : ''}" onchange="updateChallengeDate(${challenge.challenge_id}, this.value)">` : ''}
                 <div class="approve-container" style="margin-top: calc(var(--space) / 2);">
                     <div class="approve-container-one">
                         <div class="approve-container-two">
