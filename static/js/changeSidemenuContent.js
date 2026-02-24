@@ -1,6 +1,35 @@
 // Track the last active menu and whether it's currently open on mobile
 let lastActiveMenu = 'user';
 let mobileMenuOpen = false;
+let mobileNavOpen = false;
+
+// Toggle the fullscreen mobile navigation overlay
+function toggleMobileMenu() {
+    const overlay = document.getElementById('mobile-nav-overlay');
+    const toggle = document.getElementById('mobile-menu-toggle');
+    
+    if (mobileNavOpen) {
+        overlay.classList.remove('active');
+        mobileNavOpen = false;
+    } else {
+        // Sync challenges visibility in overlay
+        const navChallenges = document.querySelector('.nav-challenges');
+        const mobileNavChallenges = document.querySelector('.mobile-nav-challenges');
+        if (navChallenges && mobileNavChallenges) {
+            mobileNavChallenges.style.display = navChallenges.style.display === 'none' ? 'none' : 'flex';
+        }
+        overlay.classList.add('active');
+        mobileNavOpen = true;
+    }
+}
+
+// Handle navigation selection from the mobile overlay menu
+function mobileNavSelect(menuType) {
+    // Close the overlay first
+    toggleMobileMenu();
+    // Then open the selected side menu
+    getMenu(menuType);
+}
 
 function getMenu(menuType, skipChallengeReset){
     // On mobile, if the same menu icon is clicked again, close it (toggle)

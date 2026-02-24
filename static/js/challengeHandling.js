@@ -228,6 +228,11 @@ function loadMyChallenges() {
                 if (navChallenges) {
                     navChallenges.style.display = '';
                 }
+                // Also show mobile nav challenges item
+                const mobileNavChallenges = document.querySelector('.mobile-nav-challenges');
+                if (mobileNavChallenges) {
+                    mobileNavChallenges.style.display = 'flex';
+                }
                 
                 // Store challenges data
                 window.myChallenges = data.challenges;
@@ -244,6 +249,11 @@ function loadMyChallenges() {
                 const navChallenges = document.querySelector('.header-nav .nav-challenges');
                 if (navChallenges) {
                     navChallenges.style.display = 'none';
+                }
+                // Also hide mobile nav challenges item
+                const mobileNavChallenges = document.querySelector('.mobile-nav-challenges');
+                if (mobileNavChallenges) {
+                    mobileNavChallenges.style.display = 'none';
                 }
                 window.myChallenges = [];
                 
@@ -332,7 +342,7 @@ function displayChallenges(challenges) {
                 <!-- Show Deadline for info -->
                 <p style="font-size: 0.8em; color: var(--hl2-color); margin-bottom: 5px;">Deadline: ${challenge.deadline_date || '-'}</p>
                 <div class="approve-container" style="margin-top: calc(var(--space) / 2);">
-                    <div class="approve-container-one">
+                    <div class="approve-container-one"${!dateConfirmed && challenge.status === 'pending' ? ` onclick="confirmChallengeDate(${challenge.challenge_id})"` : ''}>
                         <div class="approve-container-two">
                             <img src="${challenge.role === 'challenger' ? '/static/images/challenger.svg' : '/static/images/challenged.svg'}" alt="Image">
                             <p class="challenge-status">${dateConfirmed ? 'Bestätigt' : 'Nicht bestätigt'}</p>
@@ -401,7 +411,7 @@ function displayChallenges(challenges) {
         if (challenge.role === 'challenged' && challenge.status === 'pending' && challenge.challenger_date_confirmed && challenge.challenged_date_confirmed) {
             challengeHTML += `
                 <div class="approve-container" style="margin-top: var(--space);">
-                    <div class="approve-container-one">
+                    <div class="approve-container-one" onclick="acceptChallenge(${challenge.challenge_id})">
                         <div class="approve-container-two">
                             <img src="/static/images/challenged.svg" alt="Challenged Image">
                             <p class="challenge-status">Annehmen?</p>
@@ -425,7 +435,7 @@ function displayChallenges(challenges) {
             challengeHTML += `
                 <div class="cancel-container">
                     <p>${cancelMessage}</p>
-                    <div class="approve-container-one">
+                    <div class="approve-container-one" onclick="toggleCancelChallenge(${challenge.challenge_id}, ${!currentWantsCancel})">
                         <div class="approve-container-two">
                             <img src="${challenge.role === 'challenger' ? '/static/images/cancel-challenger.svg' : '/static/images/cancel-challenged.svg'}" alt="Image">
                             <p class="challenge-status">${currentWantsCancel ? 'abbrechen' : 'nicht abbrechen'}</p>
