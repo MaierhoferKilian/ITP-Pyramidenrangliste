@@ -245,10 +245,12 @@ main{
     font-size: 1rem;
     font-weight: 700;
 }
-.side-menu .challenge-headline-container p{
+.side-menu .challenge-headline-container p,
+.side-menu .challenge-headline-container label{
     color: var(--bg-color);
     font-size: 1rem;
     font-weight: 300;
+    display: block;
 }
 #margin-top{
     margin-top: var(--space);
@@ -816,7 +818,8 @@ svg {
         font-size: 1rem;
     }
 
-    .side-menu .challenge-headline-container p {
+    .side-menu .challenge-headline-container p,
+    .side-menu .challenge-headline-container label {
         font-size: 1rem;
     }
 
