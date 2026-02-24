@@ -347,7 +347,7 @@ function displayChallenges(challenges) {
                             <img src="${challenge.role === 'challenger' ? '/static/images/challenger.svg' : '/static/images/challenged.svg'}" alt="Image">
                             <p class="challenge-status">${dateConfirmed ? 'Bestätigt' : 'Nicht bestätigt'}</p>
                         </div>
-                        ${!dateConfirmed && challenge.status === 'pending' ? `<div class="user-button" onclick="confirmChallengeDate(${challenge.challenge_id})">
+                        ${!dateConfirmed && challenge.status === 'pending' ? `<div class="user-button">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -416,7 +416,7 @@ function displayChallenges(challenges) {
                             <img src="/static/images/challenged.svg" alt="Challenged Image">
                             <p class="challenge-status">Annehmen?</p>
                         </div>
-                        <div class="user-button" onclick="acceptChallenge(${challenge.challenge_id})">
+                        <div class="user-button">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -440,7 +440,7 @@ function displayChallenges(challenges) {
                             <img src="${challenge.role === 'challenger' ? '/static/images/cancel-challenger.svg' : '/static/images/cancel-challenged.svg'}" alt="Image">
                             <p class="challenge-status">${currentWantsCancel ? 'abbrechen' : 'nicht abbrechen'}</p>
                         </div>
-                        <div id="cancel-button" class="user-button" onclick="toggleCancelChallenge(${challenge.challenge_id}, ${!currentWantsCancel})">
+                        <div id="cancel-button" class="user-button">
                             <svg style="display: ${currentWantsCancel ? 'none' : 'block'};" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>

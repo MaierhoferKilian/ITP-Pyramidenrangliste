@@ -272,6 +272,9 @@ main{
     justify-content: space-between;
     margin-top: calc(var(--space) / 2);
 }
+.side-menu .approve-container-one:has(.user-button){
+    cursor: pointer;
+}
 .side-menu .approve-container-two{
     display: flex;
     align-items: center;
@@ -439,6 +442,7 @@ main{
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: pointer;
 }
 .user-button{
     height: var(--space);

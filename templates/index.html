@@ -156,19 +156,19 @@
                         <p id="challenged-player-name">xxx</p>
                     </div>
                     <div id="margin-top" class="challenge-headline-container">
-                        <div class="challenge-headline" style="position: relative;">
+                        <div class="challenge-headline" style="position: relative; cursor: pointer;" onclick="try{document.getElementById('match-date-picker').showPicker();}catch(e){}">
                             <input type="date" id="match-date-picker" class="date-picker-overlay" onchange="updateMatchDate(this.value)">
                             <h4>SPIELZEITPUNKT</h4>
-                            <img src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Calendar Image">
+                            <img src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Calendar Image" style="position: relative; z-index: 3; cursor: pointer;" onclick="try{document.getElementById('match-date-picker').showPicker();}catch(e){}">
                         </div>
-                        <label for="match-date-picker" id="match-date-display" style="cursor: pointer;">Datum wählen</label>
+                        <label for="match-date-picker" id="match-date-display" style="cursor: pointer;" onclick="try{document.getElementById('match-date-picker').showPicker();}catch(e){}">Datum wählen</label>
                         <div class="approve-container">
                             <div class="approve-container-one" onclick="toggleChallengerStatus()">
                                 <div class="approve-container-two">
                                     <img src="{{ url_for('static', filename='images/challenger.svg') }}" alt="Challenger Image">
                                     <p id="challenger-status" class="challenge-status">Offen</p>
                                 </div>
-                                <div id="challenger-button" onclick="toggleChallengerStatus()" class="user-button">
+                                <div id="challenger-button" class="user-button">
                                     <svg id="challenger-icon-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
@@ -191,7 +191,7 @@
                                     <img src="{{ url_for('static', filename='images/cancel-challenger.svg') }}" alt="Challenger Image">
                                     <p id="cancel-challenger-status" class="challenge-status">nicht abbrechen</p>
                                 </div>
-                                <div id="cancel-challenger-button" onclick="toggleCancelChallengerStatus()" class="user-button">
+                                <div id="cancel-challenger-button" class="user-button">
                                     <svg id="cancel-challenger-icon-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
