@@ -159,11 +159,9 @@
                         <div class="challenge-headline" style="position: relative;">
                             <input type="date" id="match-date-picker" class="date-picker-overlay" onchange="updateMatchDate(this.value)">
                             <h4>SPIELZEITPUNKT</h4>
-                            <label for="match-date-picker" style="cursor: pointer; display: flex; align-items: center;" onclick="var p=document.getElementById('match-date-picker'); if(p.showPicker){event.preventDefault(); p.showPicker();}">
-                                <img src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Calendar Image">
-                            </label>
+                            <img src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Calendar Image">
                         </div>
-                        <label for="match-date-picker" id="match-date-display" style="cursor: pointer;" onclick="var p=document.getElementById('match-date-picker'); if(p.showPicker){event.preventDefault(); p.showPicker();}">Datum wählen</label>
+                        <label for="match-date-picker" id="match-date-display" style="cursor: pointer;">Datum wählen</label>
                         <div class="approve-container">
                             <div class="approve-container-one" onclick="toggleChallengerStatus()">
                                 <div class="approve-container-two">
