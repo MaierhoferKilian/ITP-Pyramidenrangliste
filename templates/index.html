@@ -159,9 +159,9 @@
                         <div class="challenge-headline" style="position: relative;">
                             <input type="date" id="match-date-picker" class="date-picker-overlay" onchange="updateMatchDate(this.value)">
                             <h4>SPIELZEITPUNKT</h4>
-                            <img style="cursor: pointer;" onclick="document.getElementById('match-date-picker').showPicker()" src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Calendar Image">
+                            <img style="cursor: pointer;" onclick="openDatePicker()" src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Calendar Image">
                         </div>
-                        <p id="match-date-display" onclick="document.getElementById('match-date-picker').showPicker()" style="cursor: pointer;">Datum wählen</p>
+                        <p id="match-date-display" onclick="openDatePicker()" style="cursor: pointer;">Datum wählen</p>
                         <div class="approve-container">
                             <div class="approve-container-one" onclick="toggleChallengerStatus()">
                                 <div class="approve-container-two">
@@ -284,6 +284,16 @@
             </div>
         </div>
     </main>
+    <script>
+        function openDatePicker() {
+            var picker = document.getElementById('match-date-picker');
+            if (picker.showPicker) {
+                picker.showPicker();
+            } else {
+                picker.click();
+            }
+        }
+    </script>
     <script>
         const TOTAL_PLAYERS = {{ total_players }};
         const CURRENT_USER_RANK = {% if current_player.in_ranking %}{{ current_player.current_rank }}{% else %}0{% endif %};
