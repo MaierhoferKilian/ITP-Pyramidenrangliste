@@ -209,6 +209,9 @@ function closeMenu() {
             document.getElementById("sm-player").style.display="none";
             document.getElementById("sm-challenge").style.display="none";
             document.getElementById("sm-history").style.display="none";
+            if (typeof window.fitPyramidToView === 'function') {
+                window.fitPyramidToView(true);
+            }
         }, 300);
     }
     
