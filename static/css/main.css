@@ -318,7 +318,7 @@ main{
     justify-content: center;
     gap: calc(var(--space) / 2);
     width: 100%;
-    padding: calc(var(--space) * 0.7) var(--space);
+    padding: calc(var(--space) * 0.4) var(--space);
     border: 4px solid var(--fg-color);
     font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
@@ -359,7 +359,7 @@ main{
     justify-content: center;
     gap: calc(var(--space) / 2);
     width: 100%;
-    padding: calc(var(--space) * 0.7) var(--space);
+    padding: calc(var(--space) * 0.4) var(--space);
     background-color: var(--fg-color);
     margin-bottom: calc(var(--space) * 0.6);
     border: 4px solid var(--fg-color);
