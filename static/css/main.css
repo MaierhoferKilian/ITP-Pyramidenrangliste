@@ -703,6 +703,7 @@ svg {
 
     .pyramide .ball {
         right: calc(var(--space) / 2);
+        display: none !important;
     }
 
     /* Hide the pyramid-level menu icons on mobile (they're in the header now) */
