@@ -696,6 +696,7 @@ def get_my_challenges():
                 "challenge_id": challenge.challenge_id,
                 "role": "challenger",
                 "opponent_name": f"{challenged.firstname} {challenged.lastname}",
+                "opponent_email": challenged.email,
                 "opponent_rank": challenged.current_rank,
                 "challenger_rank": current_player.current_rank,
                 "status": challenge.status.value,
@@ -722,6 +723,7 @@ def get_my_challenges():
                 "challenge_id": challenge.challenge_id,
                 "role": "challenged",
                 "opponent_name": f"{challenger.firstname} {challenger.lastname}",
+                "opponent_email": challenger.email,
                 "opponent_rank": challenger.current_rank,
                 "challenged_rank": current_player.current_rank,
                 "status": challenge.status.value,
@@ -738,6 +740,56 @@ def get_my_challenges():
             })
     
     return jsonify({"challenges": challenges_data})
+
+@app.route("/withdraw_challenge", methods=["POST"])
+def withdraw_challenge():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        challenge_id = data.get("challenge_id")
+        
+        if not challenge_id:
+            return jsonify({"error": "No challenge ID specified"}), 400
+        
+        challenge = Challenge.query.filter_by(challenge_id=challenge_id).first()
+        
+        if not challenge:
+            return jsonify({"error": "Challenge not found"}), 404
+        
+        current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+        
+        # Only the challenger can withdraw
+        if challenge.FK_challenger_id != current_player.uid:
+            return jsonify({"error": "Only the challenger can withdraw"}), 403
+        
+        # Can only withdraw pending challenges
+        if challenge.status != StatusEnum.pending:
+            return jsonify({"error": "Kann nur ausstehende Herausforderungen zurückziehen"}), 400
+        
+        # Delete associated match if it exists
+        associated_match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
+        if associated_match:
+            db.session.delete(associated_match)
+        
+        # Delete associated notifications
+        associated_notifications = Notification.query.filter_by(FK_challenge_id=challenge.challenge_id).all()
+        for notif in associated_notifications:
+            db.session.delete(notif)
+        
+        db.session.delete(challenge)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Herausforderung wurde zurückgezogen"
+        })
+        
+    except Exception as e:
+        print(f"Error withdrawing challenge: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Zurückziehen der Herausforderung"}), 500
 
 @app.route("/accept_challenge", methods=["POST"])
 def accept_challenge():

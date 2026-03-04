@@ -1,616 +1,478 @@
-let isChallengerConfirmed = false;
-let isChallengeConfirmed = false;
-let isCancelChallengerConfirmed = false;
-let isCancelChallengedConfirmed = false;
+﻿// ============================================================
+// Challenge Handling - New Flow
+// ============================================================
+// States:
+//   pending  -> Challenger: Bild4, Challenged: Bild3
+//   accepted -> Both: Bild5 (enter result) / Bild6 (result entered)
+// ============================================================
 
+let selectedChallengeDate = null; // YYYY-MM-DD
+
+// ----------------------------------------------------------
+// Reset challenge creation UI back to initial state
+// ----------------------------------------------------------
 function resetChallengeState() {
-    // Reset confirmation flags
-    isChallengeConfirmed = false;
-    isChallengerConfirmed = false;
-    isCancelChallengerConfirmed = false;
-    isCancelChallengedConfirmed = false;
+    selectedChallengeDate = null;
+    const step1 = document.getElementById('challenge-step1');
+    const step2 = document.getElementById('challenge-step2');
+    if (step1) step1.style.display = '';
+    if (step2) step2.style.display = 'none';
 
-    // Reset ball button text back to "HERAUS FORDERN"
-    const buttonText = document.getElementById('challenge-button-text');
-    if (buttonText) {
-        buttonText.textContent = 'HERAUS FORDERN';
-    }
+    const dateInput = document.getElementById('challenge-date-input');
+    if (dateInput) dateInput.value = '';
 
-    // Reset challenger status display
-    setChallengerStatus(false);
 
-    // Reset cancel statuses
-    setCancelChallengerStatus(false);
 
-    // Reset date picker and display
-    const matchDatePicker = document.getElementById('match-date-picker');
-    if (matchDatePicker) {
-        matchDatePicker.value = '';
-    }
-    const matchDateDisplay = document.getElementById('match-date-display');
-    if (matchDateDisplay) {
-        matchDateDisplay.textContent = 'Datum wählen';
-    }
-
-    // Reset challenged player name
-    const challengedName = document.getElementById('challenged-player-name');
-    if (challengedName) {
-        challengedName.textContent = 'xxx';
-    }
-
-    // Reset mobile challenge button
-    const mobileBtn = document.getElementById('mobile-challenge-btn');
-    if (mobileBtn) {
-        mobileBtn.textContent = 'HERAUSFORDERN';
-    }
+    const name1 = document.getElementById('challenged-player-name');
+    if (name1) name1.textContent = 'xxx';
+    const name2 = document.getElementById('challenged-player-name-2');
+    if (name2) name2.textContent = 'xxx';
 }
 
-function updateMatchDate(dateValue) {
-    if (dateValue) {
-        // Convert YYYY-MM-DD to DD.MM.YYYY
-        const dateParts = dateValue.split('-');
-        const formattedDate = `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}`;
-        document.getElementById('match-date-display').textContent = formattedDate;
-        
-        // Automatically set challenger status to confirmed
-        if (!isChallengerConfirmed) {
-            setChallengerStatus(true);
-        }
-    }
-}
-
-function setChallengerStatus(confirmed) {
-    isChallengerConfirmed = confirmed;
-    const statusElement = document.getElementById('challenger-status');
-    const arrowIcon = document.getElementById('challenger-icon-arrow');
-    const xIcon = document.getElementById('challenger-icon-x');
-    
-    if (confirmed) {
-        statusElement.textContent = 'Bestätigt';
-        arrowIcon.style.display = 'none';
-        xIcon.style.display = 'block';
-    } else {
-        statusElement.textContent = 'Offen';
-        arrowIcon.style.display = 'block';
-        xIcon.style.display = 'none';
-    }
-}
-
-function toggleChallengerStatus() {
-    setChallengerStatus(!isChallengerConfirmed);
-}
-
-function setCancelChallengerStatus(confirmed) {
-    isCancelChallengerConfirmed = confirmed;
-    const statusElement = document.getElementById('cancel-challenger-status');
-    const arrowIcon = document.getElementById('cancel-challenger-icon-arrow');
-    const xIcon = document.getElementById('cancel-challenger-icon-x');
-    
-    if (confirmed) {
-        statusElement.textContent = 'abbrechen';
-        arrowIcon.style.display = 'none';
-        xIcon.style.display = 'block';
-    } else {
-        statusElement.textContent = 'nicht abbrechen';
-        arrowIcon.style.display = 'block';
-        xIcon.style.display = 'none';
-    }
-}
-
-function toggleCancelChallengerStatus() {
-    setCancelChallengerStatus(!isCancelChallengerConfirmed);
-}
-
-function setCancelChallengedStatus(confirmed) {
-    isCancelChallengedConfirmed = confirmed;
-    const statusElement = document.getElementById('cancel-challenged-status');
-    const arrowIcon = document.getElementById('cancel-challenged-icon-arrow');
-    const xIcon = document.getElementById('cancel-challenged-icon-x');
-    
-    if (confirmed) {
-        statusElement.textContent = 'abbrechen';
-        arrowIcon.style.display = 'none';
-        xIcon.style.display = 'block';
-    } else {
-        statusElement.textContent = 'nicht abbrechen';
-        arrowIcon.style.display = 'block';
-        xIcon.style.display = 'none';
-    }
-}
-
-function toggleCancelChallengedStatus() {
-    setCancelChallengedStatus(!isCancelChallengedConfirmed);
-}
-
+// ----------------------------------------------------------
+// Open the challenge menu when clicking the ball / mobile btn
+// ----------------------------------------------------------
 function challengePlayer() {
-    const buttonText = document.getElementById('challenge-button-text');
-    const challengeButton = document.querySelector('.ball');
-    
-    if (!isChallengeConfirmed) {
-        // First click: Check if player has existing challenges
-        fetch('/get_my_challenges')
-            .then(response => response.json())
-            .then(data => {
-                if (data.challenges && data.challenges.length > 0) {
-                    // Player already has an active challenge - prevent further action
-                    alert('Sie haben bereits eine aktive Herausforderung. Bitte schließen Sie diese zuerst ab.');
-                    // Hide the challenge button
-                    challengeButton.style.display = 'none';
-                    // Show existing challenges
-                    getMenu('challenges');
-                    return;
-                }
-                
-                // No active challenges, proceed with challenge creation
-                // Open challenge menu (skip reset since we set state right after)
-                getMenu('challenge', true);
-                
-                // Set confirmed state
-                buttonText.textContent = 'BESTÄTIGEN';
-                isChallengeConfirmed = true;
-                
-                // Also update mobile button
-                const mobileBtn = document.getElementById('mobile-challenge-btn');
-                if (mobileBtn) {
-                    mobileBtn.textContent = 'BESTÄTIGEN';
-                }
-                
-                // Trigger shake animation
-                challengeButton.style.animation = 'none';
-                setTimeout(() => {
-                    challengeButton.style.animation = 'shake 0.5s';
-                }, 10);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Ein Fehler ist aufgetreten.');
-            });
-    } else {
-        // Second click: Submit challenge to backend
-        if (!window.selectedPlayerData) {
-            alert('Kein Spieler ausgewählt');
-            return;
-        }
-        
-        // Check if challenger confirmed
-        if (!isChallengerConfirmed) {
-            alert('Bitte bestätigen Sie die Herausforderung');
-            return;
-        }
-        
-        const matchDatePicker = document.getElementById('match-date-picker');
-        const matchDate = matchDatePicker.value;
-        
-        if (!matchDate) {
-            alert('Bitte wählen Sie ein Datum aus');
-            return;
-        }
-        
-        // Create challenge
-        fetch('/create_challenge', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                challenged_uid: window.selectedPlayerData.uid,
-                match_date: matchDate
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+    // Check for existing challenges first
+    fetch('/get_my_challenges')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.challenges && data.challenges.length > 0) {
+                alert('Sie haben bereits eine aktive Herausforderung. Bitte schliessen Sie diese zuerst ab.');
+                var ball = document.querySelector('.ball');
+                if (ball) ball.style.display = 'none';
+                getMenu('challenges');
+                return;
             }
+            // No active challenge -> open creation flow
+            getMenu('challenge', true);
+            showStep1();
         })
-        .catch(error => {
-            console.error('Error:', error);
+        .catch(function(err) {
+            console.error('Error:', err);
             alert('Ein Fehler ist aufgetreten.');
         });
+}
+
+function showStep1() {
+    var step1 = document.getElementById('challenge-step1');
+    var step2 = document.getElementById('challenge-step2');
+    var activeDisplay = document.getElementById('challenge-active-display');
+    if (step1) step1.style.display = '';
+    if (step2) step2.style.display = 'none';
+    if (activeDisplay) activeDisplay.innerHTML = '';
+
+    // Set challenged player name from selection
+    if (window.selectedPlayerData) {
+        var name = window.selectedPlayerData.firstname + ' ' + window.selectedPlayerData.lastname;
+        var el1 = document.getElementById('challenged-player-name');
+        var el2 = document.getElementById('challenged-player-name-2');
+        if (el1) el1.textContent = name;
+        if (el2) el2.textContent = name;
+    }
+
+    document.getElementById('challenge-menu-title').textContent = 'Spieler Herausfordern';
+}
+
+// ----------------------------------------------------------
+// Date picker - cross-browser
+// ----------------------------------------------------------
+function openChallengeDatePicker() {
+    var input = document.getElementById('challenge-date-input');
+    if (!input) return;
+
+    // Set min date to today
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    input.min = yyyy + '-' + mm + '-' + dd;
+    input.value = '';
+
+    // Cross-browser: try showPicker first, then click, then focus
+    try {
+        input.showPicker();
+    } catch (e) {
+        input.click();
+        input.focus();
     }
 }
 
-function loadMyChallenges() {
-    fetch('/get_my_challenges')
-        .then(response => response.json())
-        .then(data => {
-            if (data.challenges && data.challenges.length > 0) {
-                // Show challenges icon if there are active challenges
-                const challengesIcon = document.getElementById('challenges');
-                if (challengesIcon) {
-                    challengesIcon.style.display = 'block';
-                }
-                // Also show header nav challenges icon
-                const navChallenges = document.querySelector('.header-nav .nav-challenges');
-                if (navChallenges) {
-                    navChallenges.style.display = '';
-                }
-                // Also show mobile nav challenges item
-                const mobileNavChallenges = document.querySelector('.mobile-nav-challenges');
-                if (mobileNavChallenges) {
-                    mobileNavChallenges.style.display = 'flex';
-                }
-                
-                // Store challenges data
-                window.myChallenges = data.challenges;
-                
-                // Update challenge display
-                displayChallenges(data.challenges);
-            } else {
-                // Hide challenges icon if no active challenges
-                const challengesIcon = document.getElementById('challenges');
-                if (challengesIcon) {
-                    challengesIcon.style.display = 'none';
-                }
-                // Also hide header nav challenges icon
-                const navChallenges = document.querySelector('.header-nav .nav-challenges');
-                if (navChallenges) {
-                    navChallenges.style.display = 'none';
-                }
-                // Also hide mobile nav challenges item
-                const mobileNavChallenges = document.querySelector('.mobile-nav-challenges');
-                if (mobileNavChallenges) {
-                    mobileNavChallenges.style.display = 'none';
-                }
-                window.myChallenges = [];
-                
-                // Clear challenge display
-                displayChallenges([]);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading challenges:', error);
-        });
+function changeChallengeDatePicker() {
+    openChallengeDatePicker();
 }
 
-function displayChallenges(challenges) {
-    const challengeContainer = document.querySelector('#sm-challenge .challenge-container');
-    const challengeMenuTitle = document.querySelector('#sm-challenge .headline-container h2');
-    
-    if (!challengeContainer) return;
-    
-    // Clear existing active challenges
-    const existingChallenges = challengeContainer.querySelectorAll('.active-challenge');
-    existingChallenges.forEach(el => el.remove());
-    
-    // Update menu title
-    if (challengeMenuTitle) {
-        challengeMenuTitle.textContent = challenges.length > 0 ? 'Ihre Herausforderungen' : 'Keine Herausforderungen';
-    }
-    
-    // If no challenges, show a message
-    if (challenges.length === 0) {
-        const noChallengeMsgDiv = document.createElement('div');
-        noChallengeMsgDiv.className = 'active-challenge challenge-headline-container';
-        noChallengeMsgDiv.style.marginBottom = 'var(--space)';
-        noChallengeMsgDiv.innerHTML = `
-            <p style="color: var(--bg-color); font-style: italic;">Keine aktiven Herausforderungen</p>
-        `;
-        challengeContainer.insertBefore(noChallengeMsgDiv, challengeContainer.firstChild);
+function onChallengeDateSelected(value) {
+    if (!value) return;
+    selectedChallengeDate = value;
+
+    // Format DD.MM.YYYY
+    var parts = value.split('-');
+    var formatted = parts[2] + '.' + parts[1] + '.' + parts[0];
+
+    document.getElementById('challenge-selected-date').textContent = formatted;
+
+    // Switch to step 2
+    document.getElementById('challenge-step1').style.display = 'none';
+    document.getElementById('challenge-step2').style.display = '';
+}
+
+// ----------------------------------------------------------
+// Cancel creation flow
+// ----------------------------------------------------------
+function cancelChallenge() {
+    resetChallengeState();
+    if (typeof window.deselectAll === 'function') window.deselectAll();
+    if (typeof closeMenu === 'function') closeMenu();
+}
+
+// ----------------------------------------------------------
+// Submit new challenge (Bild2 -> "HERAUSFORDERUNG ERSTELLEN")
+// ----------------------------------------------------------
+function submitNewChallenge() {
+    if (!window.selectedPlayerData) {
+        alert('Kein Spieler ausgewaehlt');
         return;
     }
-    
-    // Display each challenge
-    challenges.forEach((challenge, index) => {
-        const challengeDiv = document.createElement('div');
-        challengeDiv.className = 'active-challenge challenge-headline-container';
-        challengeDiv.style.marginBottom = 'var(--space)';
-        if (index < challenges.length - 1) {
-            challengeDiv.style.paddingBottom = 'var(--space)';
-            challengeDiv.style.borderBottom = '2px solid var(--bg-color)';
-        }
-        
-        const statusText = challenge.status === 'pending' ? 'Ausstehend' : 'Akzeptiert';
-        const challengerRank = challenge.role === 'challenger' ? challenge.challenger_rank : challenge.opponent_rank;
-        const challengedRank = challenge.role === 'challenged' ? challenge.challenged_rank : challenge.opponent_rank;
-        
-        const dateConfirmed = (challenge.role === 'challenger' && challenge.challenger_date_confirmed) ||
-                            (challenge.role === 'challenged' && challenge.challenged_date_confirmed);
-        const opponentDateConfirmed = (challenge.role === 'challenger' && challenge.challenged_date_confirmed) ||
-                                     (challenge.role === 'challenged' && challenge.challenger_date_confirmed);
-        
-        const currentWantsCancel = (challenge.role === 'challenger' && challenge.challenger_wants_cancel) ||
-                                  (challenge.role === 'challenged' && challenge.challenged_wants_cancel);
-        const opponentWantsCancel = (challenge.role === 'challenger' && challenge.challenged_wants_cancel) ||
-                                   (challenge.role === 'challenged' && challenge.challenger_wants_cancel);
-        
-        let challengeHTML = `
-            <div class="challenge-headline-container">
-                <div class="challenge-headline">
-                    <h4>HERAUSFORDERER</h4>
-                    <img src="/static/images/challenger.svg" alt="Challenger Image">
-                </div>
-                <p>${challenge.role === 'challenger' ? 'Sie' : challenge.opponent_name} (#${challengerRank})</p>
-            </div>
-            <div class="challenge-headline-container">
-                <div class="challenge-headline">
-                    <h4>HERAUSGEFORDERTER</h4>
-                    <img src="/static/images/challenged.svg" alt="Challenged Image">
-                </div>
-                <p>${challenge.role === 'challenged' ? 'Sie' : challenge.opponent_name} (#${challengedRank})</p>
-            </div>
-            <div class="challenge-headline-container" style="margin-top: var(--space);">
-                <div class="challenge-headline" style="position: relative;">
-                    <h4>SPIELZEITPUNKT</h4>
-                    ${challenge.status === 'pending' ? `<img style="cursor: pointer;" src="/static/images/calendar.svg" alt="Calendar Image"><input type="date" id="match-date-picker-${challenge.challenge_id}" class="date-picker-overlay" value="${challenge.match_date ? challenge.match_date.split('.').reverse().join('-') : ''}" onchange="updateChallengeDate(${challenge.challenge_id}, this.value)">` : ''}
-                </div>
-                <!-- Show Match Date as main date -->
-                <p id="match-date-display-${challenge.challenge_id}">${challenge.match_date || 'Kein Datum'}</p>
-                <!-- Show Deadline for info -->
-                <p style="font-size: 0.8em; color: var(--hl2-color); margin-bottom: 5px;">Deadline: ${challenge.deadline_date || '-'}</p>
-                <div class="approve-container" style="margin-top: calc(var(--space) / 2);">
-                    <div class="approve-container-one"${!dateConfirmed && challenge.status === 'pending' ? ` onclick="confirmChallengeDate(${challenge.challenge_id})"` : ''}>
-                        <div class="approve-container-two">
-                            <img src="${challenge.role === 'challenger' ? '/static/images/challenger.svg' : '/static/images/challenged.svg'}" alt="Image">
-                            <p class="challenge-status">${dateConfirmed ? 'Bestätigt' : 'Nicht bestätigt'}</p>
-                        </div>
-                        ${!dateConfirmed && challenge.status === 'pending' ? `<div class="user-button">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>` : ''}
-                    </div>
-                    <div class="approve-container-one">
-                        <div class="approve-container-two">
-                            <img src="${challenge.role === 'challenged' ? '/static/images/challenged.svg' : '/static/images/challenger.svg'}" alt="Image">
-                            <p class="challenge-status">${opponentDateConfirmed ? 'Bestätigt' : 'Nicht bestätigt'}</p>
-                        </div>
-                    </div>
-                </div>
-                <p style="margin-top: calc(var(--space) / 2);">Status: ${statusText}</p>
-                ${(function(){
-                    if (challenge.status === 'accepted' && challenge.challenge_date) {
-                        const parts = challenge.match_date ? challenge.match_date.split('.') : null;
-                        if (parts && parts.length === 3) {
-                            const matchDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                            const today = new Date();
-                            today.setHours(0,0,0,0);
-                            
-                            if (today >= matchDate) {
-                                const imChallenger = challenge.role === 'challenger';
-                                const myConfirmed = imChallenger ? challenge.challenger_result_confirmed : challenge.challenged_result_confirmed;
-                                const opponentConfirmed = imChallenger ? challenge.challenged_result_confirmed : challenge.challenger_result_confirmed;
-                                const result = challenge.match_result;
-
-                                let buttonText = "Ergebnis eintragen";
-                                let buttonColor = "var(--bg-color)";
-                                let textColor = "var(--fg-color)";
-                                let additionalText = "";
-
-                                if (result) {
-                                    if (myConfirmed && !opponentConfirmed) {
-                                        buttonText = "Warte auf Bestätigung";
-                                        additionalText = `<p style="font-size: 0.8rem; margin-top: 5px;">Eingetragen: ${result}</p>`;
-                                    } else if (!myConfirmed && opponentConfirmed) {
-                                        buttonText = "Ergebnis bestätigen";
-                                        buttonColor = "var(--hl3-color)"; // Highlight for action needed
-                                    } else if (myConfirmed && opponentConfirmed) {
-                                        return `<p style="margin-top: calc(var(--space) / 2);">Ergebnis: ${result}</p>`;
-                                    }
-                                }
-
-                                return `<div class="user-button" onclick="openResultModal(${challenge.challenge_id}, '${challenge.role}', '${result || ''}')" style="margin-top: calc(var(--space) / 2); width: auto; padding: 5px 10px; justify-content: center; background-color: ${buttonColor}; border: 2px solid var(--fg-color);">
-                                            <span style="margin-right: 5px; font-weight: bold; color: ${textColor};">${buttonText}</span>
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M12 20h9" stroke="${textColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="${textColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
-                                        </div>${additionalText}`;
-                            }
-                        }
-                    }
-                    return '';
-                })()}
-            </div>
-        `;
-        
-        // Only show accept button if user is challenged AND status is pending AND both confirmed date
-        if (challenge.role === 'challenged' && challenge.status === 'pending' && challenge.challenger_date_confirmed && challenge.challenged_date_confirmed) {
-            challengeHTML += `
-                <div class="approve-container" style="margin-top: var(--space);">
-                    <div class="approve-container-one" onclick="acceptChallenge(${challenge.challenge_id})">
-                        <div class="approve-container-two">
-                            <img src="/static/images/challenged.svg" alt="Challenged Image">
-                            <p class="challenge-status">Annehmen?</p>
-                        </div>
-                        <div class="user-button">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Add cancel section for pending and accepted challenges
-        if (challenge.status === 'pending' || challenge.status === 'accepted') {
-            const cancelMessage = challenge.status === 'accepted' 
-                ? 'Sollte das Match nicht stattfinden können, besteht die Möglichkeit es einstimmig abzubrechen!'
-                : 'Sollte kein gemeinsamer Termin ausgemacht werden können, besteht die Möglichkeit die Herausforderung einstimmig abzubrechen!';
-            
-            challengeHTML += `
-                <div class="cancel-container">
-                    <p>${cancelMessage}</p>
-                    <div class="approve-container-one" onclick="toggleCancelChallenge(${challenge.challenge_id}, ${!currentWantsCancel})">
-                        <div class="approve-container-two">
-                            <img src="${challenge.role === 'challenger' ? '/static/images/cancel-challenger.svg' : '/static/images/cancel-challenged.svg'}" alt="Image">
-                            <p class="challenge-status">${currentWantsCancel ? 'abbrechen' : 'nicht abbrechen'}</p>
-                        </div>
-                        <div id="cancel-button" class="user-button">
-                            <svg style="display: ${currentWantsCancel ? 'none' : 'block'};" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <svg style="display: ${currentWantsCancel ? 'block' : 'none'};" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M16 8L8 16M16 16L8 8" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="approve-container-one">
-                        <div class="approve-container-two">
-                            <img src="${challenge.role === 'challenged' ? '/static/images/cancel-challenged.svg' : '/static/images/cancel-challenger.svg'}" alt="Image">
-                            <p class="challenge-status">${opponentWantsCancel ? 'abbrechen' : 'nicht abbrechen'}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        challengeDiv.innerHTML = challengeHTML;
-        challengeContainer.insertBefore(challengeDiv, challengeContainer.firstChild);
-    });
-}
-
-function updateChallengeDate(challengeId, dateValue) {
-    if (!dateValue) return;
-    
-    const dateParts = dateValue.split('-');
-    const formattedDate = `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}`;
-    
-    // Optimistic UI update
-    const displayElement = document.getElementById(`match-date-display-${challengeId}`);
-    if (displayElement) {
-        displayElement.textContent = formattedDate;
+    if (!selectedChallengeDate) {
+        alert('Bitte waehlen Sie ein Datum aus');
+        return;
     }
-    
-    fetch('/update_challenge_date', {
+
+    fetch('/create_challenge', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            challenge_id: challengeId,
-            new_date: dateValue
+            challenged_uid: window.selectedPlayerData.uid,
+            match_date: selectedChallengeDate
         })
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
         if (data.success) {
             alert(data.message);
-            loadMyChallenges();
+            location.reload();
         } else {
-            alert('Fehler beim Aktualisieren des Datums: ' + (data.error || 'Unbekannter Fehler'));
-            loadMyChallenges();
+            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
+    .catch(function(err) {
+        console.error('Error:', err);
         alert('Ein Fehler ist aufgetreten.');
-        loadMyChallenges();
     });
 }
 
-function confirmChallengeDate(challengeId) {
-    fetch('/confirm_challenge_date', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            challenge_id: challengeId
+// ==============================================================
+// Load & display active challenges
+// ==============================================================
+function loadMyChallenges() {
+    fetch('/get_my_challenges')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var challenges = (data.challenges || []);
+            window.myChallenges = challenges;
+
+            // Show/hide challenge nav icons
+            toggleChallengeIcons(challenges.length > 0);
+
+            displayChallenges(challenges);
         })
+        .catch(function(err) { console.error('Error loading challenges:', err); });
+}
+
+function toggleChallengeIcons(show) {
+    var el = document.getElementById('challenges');
+    if (el) el.style.display = show ? 'block' : 'none';
+    var navCh = document.querySelector('.header-nav .nav-challenges');
+    if (navCh) navCh.style.display = show ? '' : 'none';
+    var mobNav = document.querySelector('.mobile-nav-challenges');
+    if (mobNav) mobNav.style.display = show ? 'flex' : 'none';
+}
+
+// ----------------------------------------------------------
+// Build challenge views based on status & role (Bild3-6)
+// ----------------------------------------------------------
+function displayChallenges(challenges) {
+    var container = document.getElementById('challenge-active-display');
+    var title = document.getElementById('challenge-menu-title');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Hide creation steps when viewing existing challenges
+    var step1 = document.getElementById('challenge-step1');
+    var step2 = document.getElementById('challenge-step2');
+
+    if (challenges.length === 0) {
+        if (title) title.textContent = 'Keine Herausforderungen';
+        // Keep creation steps visible if needed
+        return;
+    }
+
+    // Hide creation UI when we have an active challenge
+    if (step1) step1.style.display = 'none';
+    if (step2) step2.style.display = 'none';
+    if (title) title.textContent = 'Ihre Herausforderung';
+
+    challenges.forEach(function(ch) {
+        var div = document.createElement('div');
+        div.className = 'challenge-active-card';
+        div.innerHTML = buildChallengeHTML(ch);
+        container.appendChild(div);
+    });
+}
+
+function buildChallengeHTML(ch) {
+    var isChallenger = ch.role === 'challenger';
+    var opponentName = ch.opponent_name;
+    var opponentEmail = ch.opponent_email || '';
+    var adminEmail = typeof ADMIN_EMAIL !== 'undefined' ? ADMIN_EMAIL : 'admin@example.com';
+
+    // Description text
+    var descText = isChallenger
+        ? 'Sie haben ' + opponentName + ' zu einem Spiel herausgefordert.'
+        : opponentName + ' hat Sie zu einem Spiel herausgefordert!';
+
+    // Date display
+    var dateStr = ch.match_date || 'Kein Datum';
+
+    if (ch.status === 'pending') {
+        if (isChallenger) {
+            // === Bild4: Challenger view (pending) ===
+            return '<p class="challenge-description">' + descText + '</p>' +
+                '<div class="challenge-date-display">' +
+                    '<span>' + dateStr + '</span>' +
+                    '<img src="/static/images/calendar.svg" alt="Kalender" class="challenge-btn-icon">' +
+                '</div>' +
+                '<button class="challenge-btn challenge-btn-light" onclick="changePendingDate(' + ch.challenge_id + ')">DATUM \u00c4NDERN</button>' +
+                '<input type="date" id="pending-date-input-' + ch.challenge_id + '" class="hidden-date-input" onchange="onPendingDateChanged(' + ch.challenge_id + ', this.value)">' +
+                '<button class="challenge-btn challenge-btn-cancel" onclick="withdrawChallenge(' + ch.challenge_id + ')">HERAUSFORDERUNG ZUR\u00dcCKZIEHEN</button>' +
+                '<div class="challenge-info-block">' +
+                    '<div class="challenge-info-row">' +
+                        '<img src="/static/images/alert-triangle.svg" class="challenge-info-icon" alt="Warnung">' +
+                        '<p>Wenn dein Gegner die Herausforderung annimmt, kannst du sie nicht mehr zur\u00fcckziehen.</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="challenge-info-block">' +
+                    '<div class="challenge-info-row">' +
+                        '<img src="/static/images/alert-square.svg" class="challenge-info-icon" alt="Info">' +
+                        '<p>Bei weiteren Problemen, melden Sie sich beim Administrator.</p>' +
+                    '</div>' +
+                    '<a href="javascript:void(0)" class="challenge-copy-email" onclick="copyEmailInline(this, \'' + adminEmail + '\')">Email-Adresse kopieren</a>' +
+                '</div>';
+        } else {
+            // === Bild3: Challenged view (pending) ===
+            return '<p class="challenge-description">' + descText + '</p>' +
+                '<div class="challenge-date-display">' +
+                    '<span>' + dateStr + '</span>' +
+                    '<img src="/static/images/calendar.svg" alt="Kalender" class="challenge-btn-icon">' +
+                '</div>' +
+                '<button class="challenge-btn challenge-btn-light" onclick="acceptChallengeNew(' + ch.challenge_id + ')">HERAUSFORDERUNG ANNEHMEN</button>' +
+                '<div class="challenge-info-block">' +
+                    '<div class="challenge-info-row">' +
+                        '<img src="/static/images/alert-square.svg" class="challenge-info-icon" alt="Info">' +
+                        '<p>Wenn Sie mit dem vereinbarten Termin nicht einverstanden sind, melden Sie sich beim Herausforderer.</p>' +
+                    '</div>' +
+                    '<a href="javascript:void(0)" class="challenge-copy-email" onclick="copyEmailInline(this, \'' + opponentEmail + '\')">Email-Adresse kopieren</a>' +
+                '</div>' +
+                '<div class="challenge-info-block">' +
+                    '<div class="challenge-info-row">' +
+                        '<img src="/static/images/alert-square.svg" class="challenge-info-icon" alt="Info">' +
+                        '<p>Bei weiteren Problemen, melden Sie sich beim Administrator.</p>' +
+                    '</div>' +
+                    '<a href="javascript:void(0)" class="challenge-copy-email" onclick="copyEmailInline(this, \'' + adminEmail + '\')">Email-Adresse kopieren</a>' +
+                '</div>';
+        }
+    }
+
+    if (ch.status === 'accepted') {
+        var matchResult = ch.match_result;
+        var myResultConfirmed = isChallenger ? ch.challenger_result_confirmed : ch.challenged_result_confirmed;
+        var opponentResultConfirmed = isChallenger ? ch.challenged_result_confirmed : ch.challenger_result_confirmed;
+
+        if (matchResult) {
+            // Result has been entered
+            if (myResultConfirmed && !opponentResultConfirmed) {
+                // I entered the result, waiting for opponent -> Bild6
+                return '<p class="challenge-description">' + descText + '</p>' +
+                    '<div class="challenge-date-display">' +
+                        '<span>' + dateStr + '</span>' +
+                        '<img src="/static/images/calendar.svg" alt="Kalender" class="challenge-btn-icon">' +
+                    '</div>' +
+                    '<div class="challenge-date-display challenge-score-display">' +
+                        '<span>' + formatResultForUser(matchResult, ch.role) + '</span>' +
+                    '</div>' +
+                    '<button class="challenge-btn challenge-btn-light" onclick="openResultModal(' + ch.challenge_id + ', \'' + ch.role + '\', \'' + matchResult + '\')">Spielergebnis \u00e4ndern</button>' +
+                    '<div class="challenge-info-block">' +
+                        '<div class="challenge-info-row">' +
+                            '<img src="/static/images/alert-square.svg" class="challenge-info-icon" alt="Info">' +
+                            '<p>Bei Problemen, melden Sie sich beim Administrator.</p>' +
+                        '</div>' +
+                        '<a href="javascript:void(0)" class="challenge-copy-email" onclick="copyEmailInline(this, \'' + adminEmail + '\')">Email-Adresse kopieren</a>' +
+                    '</div>';
+            } else if (!myResultConfirmed && opponentResultConfirmed) {
+                // Opponent entered result, I need to confirm
+                return '<p class="challenge-description">' + descText + '</p>' +
+                    '<div class="challenge-date-display">' +
+                        '<span>' + dateStr + '</span>' +
+                        '<img src="/static/images/calendar.svg" alt="Kalender" class="challenge-btn-icon">' +
+                    '</div>' +
+                    '<div class="challenge-date-display challenge-score-display">' +
+                        '<span>' + formatResultForUser(matchResult, ch.role) + '</span>' +
+                    '</div>' +
+                    '<button class="challenge-btn challenge-btn-light" onclick="confirmMatchResult(' + ch.challenge_id + ', \'' + ch.role + '\', \'' + matchResult + '\')">Spielergebnis best\u00e4tigen</button>' +
+                    '<button class="challenge-btn challenge-btn-light" onclick="openResultModal(' + ch.challenge_id + ', \'' + ch.role + '\', \'' + matchResult + '\')">Spielergebnis \u00e4ndern</button>' +
+                    '<div class="challenge-info-block">' +
+                        '<div class="challenge-info-row">' +
+                            '<img src="/static/images/alert-square.svg" class="challenge-info-icon" alt="Info">' +
+                            '<p>Bei Problemen, melden Sie sich beim Administrator.</p>' +
+                        '</div>' +
+                        '<a href="javascript:void(0)" class="challenge-copy-email" onclick="copyEmailInline(this, \'' + adminEmail + '\')">Email-Adresse kopieren</a>' +
+                    '</div>';
+            }
+        }
+
+        // No result yet -> Bild5 (enter result)
+        return '<p class="challenge-description">' + descText + '</p>' +
+            '<div class="challenge-date-display">' +
+                '<span>' + dateStr + '</span>' +
+                '<img src="/static/images/calendar.svg" alt="Kalender" class="challenge-btn-icon">' +
+            '</div>' +
+            '<button class="challenge-btn challenge-btn-light" onclick="openResultModal(' + ch.challenge_id + ', \'' + ch.role + '\', \'\')">Spielergebnis eintragen</button>' +
+            '<div class="challenge-info-block">' +
+                '<div class="challenge-info-row">' +
+                    '<img src="/static/images/alert-square.svg" class="challenge-info-icon" alt="Info">' +
+                    '<p>Bei Problemen, melden Sie sich beim Administrator.</p>' +
+                '</div>' +
+                '<a href="javascript:void(0)" class="challenge-copy-email" onclick="copyEmailInline(this, \'' + adminEmail + '\')">Email-Adresse kopieren</a>' +
+            '</div>';
+    }
+
+    return '';
+}
+
+// Format result for the user's perspective (always show "my : opponent")
+function formatResultForUser(result, role) {
+    if (!result || result.indexOf(':') === -1) return result;
+    var parts = result.split(':');
+    // Result is stored as challenger:challenged
+    if (role === 'challenger') {
+        return parts[0] + ' : ' + parts[1];
+    } else {
+        return parts[1] + ' : ' + parts[0];
+    }
+}
+
+// ----------------------------------------------------------
+// Actions
+// ----------------------------------------------------------
+
+// Bild4 -> Change date for pending challenge
+function changePendingDate(challengeId) {
+    var input = document.getElementById('pending-date-input-' + challengeId);
+    if (!input) return;
+    var today = new Date();
+    input.min = today.toISOString().split('T')[0];
+    try { input.showPicker(); } catch(e) { input.click(); input.focus(); }
+}
+
+function onPendingDateChanged(challengeId, value) {
+    if (!value) return;
+    fetch('/update_challenge_date', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_id: challengeId, new_date: value })
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
         if (data.success) {
             loadMyChallenges();
         } else {
             alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Ein Fehler ist aufgetreten.');
-    });
+    .catch(function(err) { console.error(err); alert('Ein Fehler ist aufgetreten.'); });
 }
 
-function toggleCancelChallenge(challengeId, wantsCancel) {
-    fetch('/toggle_cancel_challenge', {
+// Bild4 -> Withdraw (challenger only, pending only)
+function withdrawChallenge(challengeId) {
+    if (!confirm('Moechten Sie diese Herausforderung wirklich zurueckziehen?')) return;
+
+    fetch('/withdraw_challenge', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            challenge_id: challengeId,
-            wants_cancel: wantsCancel
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_id: challengeId })
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
         if (data.success) {
-            if (data.cancelled) {
-                alert(data.message);
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    })
+    .catch(function(err) { console.error(err); alert('Ein Fehler ist aufgetreten.'); });
+}
+
+// Bild3 -> Accept challenge (challenged only)
+function acceptChallengeNew(challengeId) {
+    fetch('/accept_challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_id: challengeId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            alert(data.message);
+            loadMyChallenges();
+        } else {
+            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    })
+    .catch(function(err) { console.error(err); alert('Ein Fehler ist aufgetreten.'); });
+}
+
+// Bild5/6 -> Confirm existing result
+function confirmMatchResult(challengeId, role, result) {
+    fetch('/submit_match_result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_id: challengeId, result: result })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            if (data.confirmed) {
+                alert('Ergebnis bestaetigt und Match abgeschlossen!');
                 location.reload();
             } else {
+                alert('Ergebnis bestaetigt. Warten auf den anderen Spieler.');
                 loadMyChallenges();
             }
         } else {
             alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Ein Fehler ist aufgetreten.');
-    });
+    .catch(function(err) { console.error(err); alert('Ein Fehler ist aufgetreten.'); });
 }
 
-function acceptChallenge(challengeId) {
-    if (!confirm('Möchten Sie diese Herausforderung annehmen?')) {
-        return;
-    }
-    
-    fetch('/accept_challenge', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            challenge_id: challengeId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            loadMyChallenges();
-        } else {
-            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Ein Fehler ist aufgetreten.');
-    });
-}
-
-
+// Result modal
 function openResultModal(challengeId, role, currentResult) {
     document.getElementById('result-challenge-id').value = challengeId;
     document.getElementById('result-user-role').value = role;
-    
-    // Reset values
-    let mySets = "0";
-    let opponentSets = "0";
 
-    if (currentResult && currentResult.includes(':')) {
-        const parts = currentResult.split(':');
-        // Result is always Challenger:Challenged
+    var mySets = '0', opponentSets = '0';
+    if (currentResult && currentResult.indexOf(':') !== -1) {
+        var parts = currentResult.split(':');
         if (role === 'challenger') {
-            mySets = parts[0];
-            opponentSets = parts[1];
+            mySets = parts[0]; opponentSets = parts[1];
         } else {
-            mySets = parts[1];
-            opponentSets = parts[0];
+            mySets = parts[1]; opponentSets = parts[0];
         }
     }
-
     document.getElementById('my-sets').value = mySets;
     document.getElementById('opponent-sets').value = opponentSets;
-    
-    // Show modal
     document.getElementById('result-modal').style.display = 'flex';
 }
 
@@ -619,57 +481,83 @@ function closeResultModal() {
 }
 
 function submitResult() {
-    const challengeId = document.getElementById('result-challenge-id').value;
-    const role = document.getElementById('result-user-role').value;
-    const mySets = document.getElementById('my-sets').value;
-    const opponentSets = document.getElementById('opponent-sets').value;
-    
-    // Simple validation
+    var challengeId = document.getElementById('result-challenge-id').value;
+    var role = document.getElementById('result-user-role').value;
+    var mySets = document.getElementById('my-sets').value;
+    var opponentSets = document.getElementById('opponent-sets').value;
+
     if (mySets === opponentSets) {
-        alert("Unentschieden ist in diesem Modus nicht möglich.");
+        alert('Unentschieden ist in diesem Modus nicht moeglich.');
         return;
     }
-    
-    // Create result string "Challenger:Challenged"
-    let resultString = "";
-    if (role === 'challenger') {
-        resultString = `${mySets}:${opponentSets}`;
-    } else {
-        resultString = `${opponentSets}:${mySets}`;
-    }
-    
+
+    // Result stored as challenger:challenged
+    var resultString = role === 'challenger'
+        ? mySets + ':' + opponentSets
+        : opponentSets + ':' + mySets;
+
     fetch('/submit_match_result', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            challenge_id: challengeId,
-            result: resultString
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_id: challengeId, result: resultString })
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
         if (data.success) {
             if (data.confirmed) {
-                alert('Ergebnis bestätigt und Match abgeschlossen!');
+                alert('Ergebnis bestaetigt und Match abgeschlossen!');
                 location.reload();
             } else {
-                alert('Ergebnis eingetragen. Der andere Spieler muss noch bestätigen.');
+                alert('Ergebnis eingetragen. Der andere Spieler muss noch bestaetigen.');
                 closeResultModal();
-                loadMyChallenges(); // Reload challenges to update view
+                loadMyChallenges();
             }
         } else {
             alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Ein Fehler ist aufgetreten.');
-    });
+    .catch(function(err) { console.error(err); alert('Ein Fehler ist aufgetreten.'); });
 }
 
-// Load challenges on page load
+// ----------------------------------------------------------
+// Utility: copy email to clipboard
+// ----------------------------------------------------------
+function copyEmailInline(linkElement, email) {
+    if (!email) return;
+    var originalText = linkElement.textContent;
+    if (originalText === 'Kopiert!') return;
+
+    function showCopied() {
+        linkElement.textContent = 'Kopiert!';
+        setTimeout(function() {
+            linkElement.textContent = originalText;
+        }, 1500);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(email).then(showCopied).catch(function() {
+            fallbackCopyInline(email, showCopied);
+        });
+    } else {
+        fallbackCopyInline(email, showCopied);
+    }
+}
+
+function fallbackCopyInline(email, onSuccess) {
+    var ta = document.createElement('textarea');
+    ta.value = email;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); onSuccess(); }
+    catch(e) { /* silent */ }
+    document.body.removeChild(ta);
+}
+
+// ----------------------------------------------------------
+// Init
+// ----------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function() {
     loadMyChallenges();
 });
