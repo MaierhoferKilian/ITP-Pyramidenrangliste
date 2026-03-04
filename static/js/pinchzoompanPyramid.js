@@ -432,7 +432,7 @@ function fitPyramidToView(animate = false) {
 
   // On mobile, start with a larger default zoom so users don't need to pinch-zoom
   if (window.innerWidth <= 1031) {
-    scale *= 4;
+    scale *= 2;
   }
 
   const centerX = contentBBox.x + contentBBox.width / 2;
