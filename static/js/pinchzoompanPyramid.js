@@ -428,7 +428,13 @@ function fitPyramidToView(animate = false) {
   const fullHeight = contentBBox.height + padding * 2;
   const scaleX = width / fullWidth;
   const scaleY = height / fullHeight;
-  const scale = Math.min(scaleX, scaleY);
+  let scale = Math.min(scaleX, scaleY);
+
+  // On mobile, start with a larger default zoom so users don't need to pinch-zoom
+  if (window.innerWidth <= 1031) {
+    scale *= 4;
+  }
+
   const centerX = contentBBox.x + contentBBox.width / 2;
   const centerY = contentBBox.y + contentBBox.height / 2;
   const transform = d3.zoomIdentity
