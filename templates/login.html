@@ -38,25 +38,10 @@
         width: 320px;
         max-width: 90vw;
     }
-    .login-form input[type="email"] {
-        font-family: var(--font);
-        font-size: 1em;
-        padding: 12px 16px;
-        border: 2px solid var(--fg-color);
-        background: transparent;
-        color: var(--fg-color);
-        outline: none;
-        letter-spacing: 1px;
-    }
-    .login-form input[type="email"]::placeholder {
-        color: var(--fg-color);
-        opacity: 0.4;
-    }
-    .login-form input[type="email"]:focus {
-        border-color: var(--fg-color);
-        box-shadow: 0 0 0 1px var(--fg-color);
-    }
-    .login-form button {
+    .login-form a {
+        display: inline-block;
+        text-align: center;
+        text-decoration: none;
         font-family: var(--font);
         font-size: 1em;
         padding: 12px 16px;
@@ -69,7 +54,7 @@
         font-weight: 700;
         transition: all 0.2s;
     }
-    .login-form button:hover {
+    .login-form a:hover {
         background: transparent;
         color: var(--fg-color);
     }
@@ -78,6 +63,13 @@
         font-family: var(--font);
         font-size: 0.85em;
         text-align: center;
+    }
+    .login-message {
+        color: var(--fg-color);
+        font-family: var(--font);
+        font-size: 0.85em;
+        text-align: center;
+        opacity: 0.85;
     }
 </style>
 
@@ -89,10 +81,13 @@
     {% if error %}
     <p class="login-error">{{ error }}</p>
     {% endif %}
+
+    {% if message %}
+    <p class="login-message">{{ message }}</p>
+    {% endif %}
     
-    <form class="login-form" action="/fake_login" method="POST">
-        <input type="email" name="email" placeholder="vorname.nachname@htlwy.at" required autofocus>
-        <button type="submit">Anmelden</button>
-    </form>
+    <div class="login-form">
+        <a href="{{ url_for('start_login') }}">Mit Microsoft anmelden</a>
+    </div>
 </div>
 {% endblock %}

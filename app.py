@@ -1,16 +1,26 @@
 from flask import Flask, render_template, url_for, session, redirect, request, jsonify
 import msal, os, requests
-from app_config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_PATH, SCOPE, SESSION_TYPE
+from app_config import (
+    CLIENT_ID,
+    CLIENT_SECRET,
+    AUTHORITY,
+    REDIRECT_PATH,
+    APP_BASE_URL,
+    SCOPE,
+    SESSION_TYPE,
+    FLASK_SECRET_KEY,
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
+from urllib.parse import quote
 import enum
-import hashlib
-import random
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_object("app_config")
-app.secret_key = os.urandom(24)
+app.secret_key = FLASK_SECRET_KEY or os.urandom(24)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 db = SQLAlchemy(app)
@@ -122,22 +132,27 @@ def _build_msal_app(cache=None):
         token_cache=cache
     )
 
-def _build_auth_url():
+def _get_redirect_uri():
+    if APP_BASE_URL:
+        return f"{APP_BASE_URL.rstrip('/')}{REDIRECT_PATH}"
+
+    # Azure Redirect URIs must match exactly. Normalize local loopback hosts
+    # to localhost so calls via 127.0.0.1 still use the configured localhost URI.
+    host = request.host or ""
+    if host.startswith("127.0.0.1") or host.startswith("[::1]"):
+        if ":" in host:
+            port = host.rsplit(":", 1)[1]
+            return f"{request.scheme}://localhost:{port}{REDIRECT_PATH}"
+        return f"{request.scheme}://localhost{REDIRECT_PATH}"
+
+    return url_for("authorized", _external=True)
+
+def _build_auth_url(redirect_uri, state):
     return _build_msal_app().get_authorization_request_url(
         SCOPE,
-        redirect_uri=f"http://localhost:5000{REDIRECT_PATH}"
+        state=state,
+        redirect_uri=redirect_uri
     )
-
-def _get_token_from_cache():
-    cache = msal.SerializableTokenCache()
-    if session.get("token_cache"):
-        cache.deserialize(session["token_cache"])
-    cca = _build_msal_app(cache)
-    accounts = cca.get_accounts()
-    if accounts:
-        result = cca.acquire_token_silent(SCOPE, account=accounts[0])
-        session["token_cache"] = cache.serialize()
-        return result
 
 def get_user_graph_data(access_token):
     graph_endpoint = "https://graph.microsoft.com/v1.0/me"
@@ -156,7 +171,11 @@ def create_or_update_player(id_token_claims, graph_data):
             return None
         
         # E-Mail-Adresse aus verschiedenen möglichen Feldern
-        email = (graph_data.get('mail'))
+        email = (
+            graph_data.get('mail')
+            or graph_data.get('userPrincipalName')
+            or id_token_claims.get('preferred_username')
+        )
         
         # Vorname und Nachname
         firstname = graph_data.get('givenName', '')
@@ -419,65 +438,27 @@ def selected_player():
         })
     return jsonify({"error": "Player not found"}), 404
 
-# ===== FAKE LOGIN (kein Microsoft-Domain nötig) =====
-
-def _generate_uid(email):
-    """Erzeugt eine deterministische UID aus der Email (gleiche Email = gleicher User)"""
-    return hashlib.sha256(email.lower().strip().encode()).hexdigest()[:32]
-
-def _extract_user_info(email):
-    """Extrahiert realistischen Vor-/Nachnamen und generiert eine Klasse aus der Email.
-    Erwartet Format: vorname.nachname@domain oder vorname@domain"""
-    local_part = email.split('@')[0]  # z.B. 'max.mustermann'
-    parts = local_part.split('.')
-    
-    firstname = parts[0].capitalize() if parts else 'Unbekannt'
-    lastname = parts[1].capitalize() if len(parts) > 1 else ''
-    
-    # Realistische HTL-Klasse generieren (deterministisch basierend auf Email)
-    random.seed(email.lower())  # Deterministisch: gleiche Email = gleiche Klasse
-    year = random.choice(['1', '2', '3', '4', '5'])
-    dept = random.choice(['AHIT', 'BHIT', 'AHEL', 'BHEL', 'AHME'])
-    class_ = f"{year}{dept}"
-    random.seed()  # Seed zurücksetzen
-    
-    return firstname, lastname, class_
-
 @app.route("/login")
 def login():
-    # Zeige Fake-Login-Seite statt Microsoft-Redirect
-    return render_template("login.html")
+    if session.get("user"):
+        return redirect(url_for("index"))
 
-@app.route("/fake_login", methods=["POST"])
-def fake_login():
-    email = request.form.get("email", "").strip().lower()
-    
-    if not email or '@' not in email:
-        return render_template("login.html", error="Bitte eine gültige Email-Adresse eingeben.")
-    
-    uid = _generate_uid(email)
-    firstname, lastname, class_ = _extract_user_info(email)
-    
-    # Fake id_token_claims und graph_data erstellen (wie Microsoft es liefern würde)
-    fake_claims = {
-        "oid": uid,
-        "preferred_username": email,
-        "name": f"{firstname} {lastname}".strip(),
-    }
-    fake_graph_data = {
-        "mail": email,
-        "givenName": firstname,
-        "surname": lastname,
-        "jobTitle": class_,  # jobTitle wird als Klasse verwendet
-    }
-    
-    # Spieler in DB anlegen/aktualisieren (nutzt die bestehende Funktion)
-    create_or_update_player(fake_claims, fake_graph_data)
-    
-    # Session setzen (gleiche Struktur wie bei echtem Microsoft-Login)
-    session["user"] = fake_claims
-    
-    return redirect(url_for("index"))
+    # Normalize loopback addresses to localhost for Azure redirect URI matching
+    host = request.host or ""
+    if host.startswith("127.0.0.1") or host.startswith("[::1]"):
+        if ":" in host:
+            port = host.rsplit(":", 1)[1]
+            return redirect(f"{request.scheme}://localhost:{port}{url_for('login')}")
+        return redirect(f"{request.scheme}://localhost{url_for('login')}")
+
+    redirect_uri = _get_redirect_uri()
+    state = os.urandom(16).hex()
+    session["auth_state"] = state
+    return redirect(_build_auth_url(redirect_uri=redirect_uri, state=state))
+
+@app.route("/signed_out")
+def signed_out():
+    return redirect(url_for("login"))
 
 @app.route("/join_ranking", methods=["POST"])
 def join_ranking():
@@ -1022,12 +1003,22 @@ def toggle_cancel_challenge():
 def logout():
     # Clear the session
     session.clear()
-    
-    # Direkt zur Login-Seite (kein Microsoft-Logout nötig)
-    return redirect(url_for("login"))
+
+    post_logout_redirect = quote(url_for("signed_out", _external=True), safe="")
+    logout_url = f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri={post_logout_redirect}"
+    return redirect(logout_url)
 
 @app.route(REDIRECT_PATH)
 def authorized():
+    if request.args.get("error"):
+        error_msg = request.args.get("error_description", request.args.get("error"))
+        return f"Login fehlgeschlagen: {error_msg}", 400
+
+    expected_state = session.get("auth_state")
+    state = request.args.get("state")
+    if not expected_state or state != expected_state:
+        return "Invalid auth state", 400
+
     code = request.args.get("code")
     if not code:
         return "Login failed", 400
@@ -1036,24 +1027,25 @@ def authorized():
     result = cca.acquire_token_by_authorization_code(
         code,
         scopes=SCOPE,
-        redirect_uri=f"http://localhost:5000{REDIRECT_PATH}"
+        redirect_uri=_get_redirect_uri()
     )
+
     if "access_token" in result:
-        id_token_claims = result.get("id_token_claims")
+        id_token_claims = result.get("id_token_claims") or {}
 
         graph_data = get_user_graph_data(result["access_token"])
-        id_token_claims["graph_data"] = graph_data
 
         create_or_update_player(id_token_claims, graph_data)
 
-        session["user"] = id_token_claims
+        # Store only the minimal info needed to keep the session cookie small
+        user_id = id_token_claims.get('oid') or id_token_claims.get('sub')
+        session["user"] = {"oid": user_id}
+        session.pop("auth_state", None)
 
-        cache = msal.SerializableTokenCache()
-        cache.deserialize(session.get("token_cache", "{}"))
-        session["token_cache"] = cache.serialize()
         return redirect(url_for("index"))
 
-    return "Authentication failed", 400
+    error_msg = result.get("error_description") or result.get("error") or "Authentication failed"
+    return f"Login fehlgeschlagen: {error_msg}", 400
 
 @app.route("/submit_match_result", methods=["POST"])
 def submit_match_result():
