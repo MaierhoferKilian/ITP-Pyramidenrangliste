@@ -1,6 +1,35 @@
 // Track the last active menu and whether it's currently open on mobile
 let lastActiveMenu = 'user';
 let mobileMenuOpen = false;
+let mobileNavOpen = false;
+
+// Toggle the fullscreen mobile navigation overlay
+function toggleMobileMenu() {
+    const overlay = document.getElementById('mobile-nav-overlay');
+    const toggle = document.getElementById('mobile-menu-toggle');
+    
+    if (mobileNavOpen) {
+        overlay.classList.remove('active');
+        mobileNavOpen = false;
+    } else {
+        // Sync challenges visibility in overlay
+        const navChallenges = document.querySelector('.nav-challenges');
+        const mobileNavChallenges = document.querySelector('.mobile-nav-challenges');
+        if (navChallenges && mobileNavChallenges) {
+            mobileNavChallenges.style.display = navChallenges.style.display === 'none' ? 'none' : 'flex';
+        }
+        overlay.classList.add('active');
+        mobileNavOpen = true;
+    }
+}
+
+// Handle navigation selection from the mobile overlay menu
+function mobileNavSelect(menuType) {
+    // Close the overlay first
+    toggleMobileMenu();
+    // Then open the selected side menu
+    getMenu(menuType);
+}
 
 function getMenu(menuType, skipChallengeReset){
     // On mobile, if the same menu icon is clicked again, close it (toggle)
@@ -85,59 +114,35 @@ function getMenu(menuType, skipChallengeReset){
     }
     else if (menuType==="challenge"){
         document.getElementById("sm-challenge").style.display="block";
-        
-        // Reset menu title when creating new challenge
-        const challengeMenuTitle = document.querySelector('#sm-challenge .headline-container h2');
-        if (challengeMenuTitle) {
-            challengeMenuTitle.textContent = 'Spieler Herausfordern';
-        }
-        
-        // Show challenge creation form
-        const challengeCreationForm = document.getElementById('challenge-creation-form');
-        if (challengeCreationForm) {
-            challengeCreationForm.style.display = 'block';
-        }
-        
-        // Show mobile challenge button container
-        const mobileChallengeBtn = document.getElementById('mobile-challenge-btn');
-        if (mobileChallengeBtn) {
-            mobileChallengeBtn.style.display = '';
-            mobileChallengeBtn.parentElement.style.display = '';
-        }
-        
-        // Clear any existing active challenges from view
-        const existingChallenges = document.querySelectorAll('#sm-challenge .active-challenge');
-        existingChallenges.forEach(el => el.remove());
         document.getElementById("sm-challenge").classList.add("mobile-active");
         lastActiveMenu = 'challenge';
         
+        // Show step1 of challenge creation & hide active display
+        var step1 = document.getElementById('challenge-step1');
+        var step2 = document.getElementById('challenge-step2');
+        var activeDisplay = document.getElementById('challenge-active-display');
+        if (step1) step1.style.display = '';
+        if (step2) step2.style.display = 'none';
+        if (activeDisplay) activeDisplay.innerHTML = '';
+        
         // Update challenged player name if data is available
         if (window.selectedPlayerData) {
-            const challengedNameElement = document.getElementById("challenged-player-name");
-            if (challengedNameElement) {
-                challengedNameElement.textContent = `${window.selectedPlayerData.firstname} ${window.selectedPlayerData.lastname}`;
-            }
+            var challengedName = window.selectedPlayerData.firstname + ' ' + window.selectedPlayerData.lastname;
+            var el1 = document.getElementById("challenged-player-name");
+            var el2 = document.getElementById("challenged-player-name-2");
+            if (el1) el1.textContent = challengedName;
+            if (el2) el2.textContent = challengedName;
         }
     }
     else if (menuType==="challenges"){
         document.getElementById("sm-challenge").style.display="block";
         document.getElementById("sm-challenge").classList.add("mobile-active");
         
-        // Hide challenge creation form when viewing existing challenges
-        const challengeCreationForm = document.getElementById('challenge-creation-form');
-        if (challengeCreationForm) {
-            challengeCreationForm.style.display = 'none';
-        }
-        
-        // Hide mobile challenge button when viewing existing challenges
-        const mobileBtn = document.getElementById('mobile-challenge-btn');
-        if (mobileBtn) {
-            mobileBtn.style.display = 'none';
-        }
-        const mobileBtnContainer = mobileBtn ? mobileBtn.parentElement : null;
-        if (mobileBtnContainer) {
-            mobileBtnContainer.style.display = 'none';
-        }
+        // Hide creation steps, show active challenges
+        var step1c = document.getElementById('challenge-step1');
+        var step2c = document.getElementById('challenge-step2');
+        if (step1c) step1c.style.display = 'none';
+        if (step2c) step2c.style.display = 'none';
         
         // Load and display all challenges
         if (typeof loadMyChallenges === 'function') {
@@ -180,6 +185,9 @@ function closeMenu() {
             document.getElementById("sm-player").style.display="none";
             document.getElementById("sm-challenge").style.display="none";
             document.getElementById("sm-history").style.display="none";
+            if (typeof window.fitPyramidToView === 'function') {
+                window.fitPyramidToView(true);
+            }
         }, 300);
     }
     

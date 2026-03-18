@@ -1,14 +1,26 @@
 from flask import Flask, render_template, url_for, session, redirect, request, jsonify
 import msal, os, requests
-from app_config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_PATH, SCOPE, SESSION_TYPE
+from app_config import (
+    CLIENT_ID,
+    CLIENT_SECRET,
+    AUTHORITY,
+    REDIRECT_PATH,
+    APP_BASE_URL,
+    SCOPE,
+    SESSION_TYPE,
+    FLASK_SECRET_KEY,
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
+from urllib.parse import quote
 import enum
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_object("app_config")
-app.secret_key = os.urandom(24)
+app.secret_key = FLASK_SECRET_KEY or os.urandom(24)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 db = SQLAlchemy(app)
@@ -120,22 +132,27 @@ def _build_msal_app(cache=None):
         token_cache=cache
     )
 
-def _build_auth_url():
+def _get_redirect_uri():
+    if APP_BASE_URL:
+        return f"{APP_BASE_URL.rstrip('/')}{REDIRECT_PATH}"
+
+    # Azure Redirect URIs must match exactly. Normalize local loopback hosts
+    # to localhost so calls via 127.0.0.1 still use the configured localhost URI.
+    host = request.host or ""
+    if host.startswith("127.0.0.1") or host.startswith("[::1]"):
+        if ":" in host:
+            port = host.rsplit(":", 1)[1]
+            return f"{request.scheme}://localhost:{port}{REDIRECT_PATH}"
+        return f"{request.scheme}://localhost{REDIRECT_PATH}"
+
+    return url_for("authorized", _external=True)
+
+def _build_auth_url(redirect_uri, state):
     return _build_msal_app().get_authorization_request_url(
         SCOPE,
-        redirect_uri=f"http://localhost:5000{REDIRECT_PATH}"
+        state=state,
+        redirect_uri=redirect_uri
     )
-
-def _get_token_from_cache():
-    cache = msal.SerializableTokenCache()
-    if session.get("token_cache"):
-        cache.deserialize(session["token_cache"])
-    cca = _build_msal_app(cache)
-    accounts = cca.get_accounts()
-    if accounts:
-        result = cca.acquire_token_silent(SCOPE, account=accounts[0])
-        session["token_cache"] = cache.serialize()
-        return result
 
 def get_user_graph_data(access_token):
     graph_endpoint = "https://graph.microsoft.com/v1.0/me"
@@ -154,7 +171,11 @@ def create_or_update_player(id_token_claims, graph_data):
             return None
         
         # E-Mail-Adresse aus verschiedenen möglichen Feldern
-        email = (graph_data.get('mail'))
+        email = (
+            graph_data.get('mail')
+            or graph_data.get('userPrincipalName')
+            or id_token_claims.get('preferred_username')
+        )
         
         # Vorname und Nachname
         firstname = graph_data.get('givenName', '')
@@ -419,8 +440,25 @@ def selected_player():
 
 @app.route("/login")
 def login():
-    auth_url = _build_auth_url()
-    return redirect(auth_url)
+    if session.get("user"):
+        return redirect(url_for("index"))
+
+    # Normalize loopback addresses to localhost for Azure redirect URI matching
+    host = request.host or ""
+    if host.startswith("127.0.0.1") or host.startswith("[::1]"):
+        if ":" in host:
+            port = host.rsplit(":", 1)[1]
+            return redirect(f"{request.scheme}://localhost:{port}{url_for('login')}")
+        return redirect(f"{request.scheme}://localhost{url_for('login')}")
+
+    redirect_uri = _get_redirect_uri()
+    state = os.urandom(16).hex()
+    session["auth_state"] = state
+    return redirect(_build_auth_url(redirect_uri=redirect_uri, state=state))
+
+@app.route("/signed_out")
+def signed_out():
+    return redirect(url_for("login"))
 
 @app.route("/join_ranking", methods=["POST"])
 def join_ranking():
@@ -639,6 +677,7 @@ def get_my_challenges():
                 "challenge_id": challenge.challenge_id,
                 "role": "challenger",
                 "opponent_name": f"{challenged.firstname} {challenged.lastname}",
+                "opponent_email": challenged.email,
                 "opponent_rank": challenged.current_rank,
                 "challenger_rank": current_player.current_rank,
                 "status": challenge.status.value,
@@ -665,6 +704,7 @@ def get_my_challenges():
                 "challenge_id": challenge.challenge_id,
                 "role": "challenged",
                 "opponent_name": f"{challenger.firstname} {challenger.lastname}",
+                "opponent_email": challenger.email,
                 "opponent_rank": challenger.current_rank,
                 "challenged_rank": current_player.current_rank,
                 "status": challenge.status.value,
@@ -681,6 +721,56 @@ def get_my_challenges():
             })
     
     return jsonify({"challenges": challenges_data})
+
+@app.route("/withdraw_challenge", methods=["POST"])
+def withdraw_challenge():
+    if not session.get("user"):
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        challenge_id = data.get("challenge_id")
+        
+        if not challenge_id:
+            return jsonify({"error": "No challenge ID specified"}), 400
+        
+        challenge = Challenge.query.filter_by(challenge_id=challenge_id).first()
+        
+        if not challenge:
+            return jsonify({"error": "Challenge not found"}), 404
+        
+        current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+        
+        # Only the challenger can withdraw
+        if challenge.FK_challenger_id != current_player.uid:
+            return jsonify({"error": "Only the challenger can withdraw"}), 403
+        
+        # Can only withdraw pending challenges
+        if challenge.status != StatusEnum.pending:
+            return jsonify({"error": "Kann nur ausstehende Herausforderungen zurückziehen"}), 400
+        
+        # Delete associated match if it exists
+        associated_match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
+        if associated_match:
+            db.session.delete(associated_match)
+        
+        # Delete associated notifications
+        associated_notifications = Notification.query.filter_by(FK_challenge_id=challenge.challenge_id).all()
+        for notif in associated_notifications:
+            db.session.delete(notif)
+        
+        db.session.delete(challenge)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Herausforderung wurde zurückgezogen"
+        })
+        
+    except Exception as e:
+        print(f"Error withdrawing challenge: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Zurückziehen der Herausforderung"}), 500
 
 @app.route("/accept_challenge", methods=["POST"])
 def accept_challenge():
@@ -913,13 +1003,22 @@ def toggle_cancel_challenge():
 def logout():
     # Clear the session
     session.clear()
-    
-    # Redirect to Microsoft logout endpoint
-    logout_url = f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri=http://localhost:5000/login"
+
+    post_logout_redirect = quote(url_for("signed_out", _external=True), safe="")
+    logout_url = f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri={post_logout_redirect}"
     return redirect(logout_url)
 
 @app.route(REDIRECT_PATH)
 def authorized():
+    if request.args.get("error"):
+        error_msg = request.args.get("error_description", request.args.get("error"))
+        return f"Login fehlgeschlagen: {error_msg}", 400
+
+    expected_state = session.get("auth_state")
+    state = request.args.get("state")
+    if not expected_state or state != expected_state:
+        return "Invalid auth state", 400
+
     code = request.args.get("code")
     if not code:
         return "Login failed", 400
@@ -928,24 +1027,25 @@ def authorized():
     result = cca.acquire_token_by_authorization_code(
         code,
         scopes=SCOPE,
-        redirect_uri=f"http://localhost:5000{REDIRECT_PATH}"
+        redirect_uri=_get_redirect_uri()
     )
+
     if "access_token" in result:
-        id_token_claims = result.get("id_token_claims")
+        id_token_claims = result.get("id_token_claims") or {}
 
         graph_data = get_user_graph_data(result["access_token"])
-        id_token_claims["graph_data"] = graph_data
 
         create_or_update_player(id_token_claims, graph_data)
 
-        session["user"] = id_token_claims
+        # Store only the minimal info needed to keep the session cookie small
+        user_id = id_token_claims.get('oid') or id_token_claims.get('sub')
+        session["user"] = {"oid": user_id}
+        session.pop("auth_state", None)
 
-        cache = msal.SerializableTokenCache()
-        cache.deserialize(session.get("token_cache", "{}"))
-        session["token_cache"] = cache.serialize()
         return redirect(url_for("index"))
 
-    return "Authentication failed", 400
+    error_msg = result.get("error_description") or result.get("error") or "Authentication failed"
+    return f"Login fehlgeschlagen: {error_msg}", 400
 
 @app.route("/submit_match_result", methods=["POST"])
 def submit_match_result():
