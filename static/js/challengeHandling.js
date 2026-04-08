@@ -7,7 +7,6 @@
 // ============================================================
 
 let selectedChallengeDate = null; // YYYY-MM-DD
-let challengePickerOpenedAt = 0;
 
 function getTodayIsoDate() {
     var today = new Date();
@@ -175,7 +174,6 @@ function openChallengeDatePicker() {
 
     input.min = getTodayIsoDate();
     input.value = selectedChallengeDate || '';
-    challengePickerOpenedAt = Date.now();
 
     openNativeDatePicker(input);
 }
@@ -186,15 +184,6 @@ function changeChallengeDatePicker() {
 
 function onChallengeDateSelected(value) {
     if (!value) return;
-
-    // iOS can auto-commit today's date immediately on open.
-    // Ignore only this ultra-fast first auto-change.
-    var openedAgo = Date.now() - challengePickerOpenedAt;
-    if (selectedChallengeDate === null && value === getTodayIsoDate() && openedAgo >= 0 && openedAgo < 220) {
-        var inputReset = document.getElementById('challenge-date-input');
-        if (inputReset) inputReset.value = '';
-        return;
-    }
 
     selectedChallengeDate = value;
 
