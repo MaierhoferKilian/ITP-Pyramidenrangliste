@@ -74,6 +74,70 @@ function showStep1() {
     document.getElementById('challenge-menu-title').textContent = 'Spieler Herausfordern';
 }
 
+function openNativeDatePicker(input) {
+    if (!input) return;
+
+    // iOS Safari often blocks programmatic clicks on fully hidden date inputs.
+    // Temporarily place the input on-screen (nearly invisible), then restore.
+    var ua = navigator.userAgent || '';
+    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var restoreStyles = null;
+    var restored = false;
+
+    if (isIOS) {
+        var previous = {
+            position: input.style.position,
+            left: input.style.left,
+            bottom: input.style.bottom,
+            width: input.style.width,
+            height: input.style.height,
+            opacity: input.style.opacity,
+            pointerEvents: input.style.pointerEvents,
+            zIndex: input.style.zIndex
+        };
+
+        input.style.position = 'fixed';
+        input.style.left = '0';
+        input.style.bottom = '0';
+        input.style.width = '100vw';
+        input.style.height = '44px';
+        input.style.opacity = '0.01';
+        input.style.pointerEvents = 'auto';
+        input.style.zIndex = '2147483647';
+
+        restoreStyles = function() {
+            if (restored) return;
+            restored = true;
+            input.style.position = previous.position;
+            input.style.left = previous.left;
+            input.style.bottom = previous.bottom;
+            input.style.width = previous.width;
+            input.style.height = previous.height;
+            input.style.opacity = previous.opacity;
+            input.style.pointerEvents = previous.pointerEvents;
+            input.style.zIndex = previous.zIndex;
+        };
+    }
+
+    try {
+        if (typeof input.showPicker === 'function') {
+            input.showPicker();
+        } else {
+            input.focus();
+            input.click();
+        }
+    } catch (e) {
+        input.focus();
+        input.click();
+    }
+
+    if (restoreStyles) {
+        input.addEventListener('change', restoreStyles, { once: true });
+        input.addEventListener('blur', restoreStyles, { once: true });
+        setTimeout(restoreStyles, 1200);
+    }
+}
+
 // ----------------------------------------------------------
 // Date picker - cross-browser
 // ----------------------------------------------------------
@@ -89,13 +153,7 @@ function openChallengeDatePicker() {
     input.min = yyyy + '-' + mm + '-' + dd;
     input.value = '';
 
-    // Cross-browser: try showPicker first, then click, then focus
-    try {
-        input.showPicker();
-    } catch (e) {
-        input.click();
-        input.focus();
-    }
+    openNativeDatePicker(input);
 }
 
 function changeChallengeDatePicker() {
@@ -372,7 +430,7 @@ function changePendingDate(challengeId) {
     if (!input) return;
     var today = new Date();
     input.min = today.toISOString().split('T')[0];
-    try { input.showPicker(); } catch(e) { input.click(); input.focus(); }
+    openNativeDatePicker(input);
 }
 
 function onPendingDateChanged(challengeId, value) {
