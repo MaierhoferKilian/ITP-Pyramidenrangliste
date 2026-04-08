@@ -148,7 +148,6 @@
                         <img src="{{ url_for('static', filename='images/calendar-dark.svg') }}" alt="Kalender" class="challenge-btn-icon">
                     </button>
                     <button class="challenge-btn challenge-btn-cancel" onclick="cancelChallenge()">VORGANG ABBRECHEN</button>
-                    <input type="date" id="challenge-date-input" class="hidden-date-input challenge-date-input" onchange="onChallengeDateSelected(this.value)">
                 </div>
                 <!-- Step 2: Date selected, confirm (Bild2) -->
                 <div id="challenge-step2" style="display: none;">
@@ -161,6 +160,7 @@
                     <button class="challenge-btn challenge-btn-light" onclick="submitNewChallenge()">HERAUSFORDERUNG ERSTELLEN</button>
                     <button class="challenge-btn challenge-btn-cancel" onclick="cancelChallenge()">VORGANG ABBRECHEN</button>
                 </div>
+                <input type="date" id="challenge-date-input" class="hidden-date-input challenge-date-input" onchange="onChallengeDateSelected(this.value)">
                 <!-- Active challenges display (Bild3/4/5/6) -->
                 <div id="challenge-active-display"></div>
             </div>
@@ -243,7 +243,7 @@
         const ACTIVE_CHALLENGE_OPPONENT_RANK = {% if active_challenge_opponent_rank %}{{ active_challenge_opponent_rank }}{% else %}null{% endif %};
         const ADMIN_EMAIL = '{{ admin_email|default("admin@example.com") }}';
     </script>
-    <script src="{{ url_for('static', filename='js/challengeHandling.js', v='20260408-6') }}"></script>
+    <script src="{{ url_for('static', filename='js/challengeHandling.js', v='20260408-8') }}"></script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>
     <script src="{{ url_for('static', filename='js/userExitHandling.js') }}"></script>
