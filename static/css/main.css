@@ -264,7 +264,7 @@ main{
     opacity: 0;
     cursor: pointer;
     z-index: 2;
-    -webkit-appearance: none;
+    pointer-events: auto;
     box-sizing: border-box;
 }
 .side-menu .approve-container-one{
@@ -332,6 +332,10 @@ main{
     border-radius: 0;
     outline: none;
     transition: background 0.2s ease;
+}
+.challenge-date-trigger {
+    position: relative;
+    overflow: hidden;
 }
 .challenge-btn-light {
     background: var(--bg-color);

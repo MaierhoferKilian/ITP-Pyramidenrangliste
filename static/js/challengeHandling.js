@@ -8,6 +8,26 @@
 
 let selectedChallengeDate = null; // YYYY-MM-DD
 
+function getTodayIsoDate() {
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+}
+
+function syncChallengeDateInputs(options) {
+    var opts = options || {};
+    var clearValue = !!opts.clearValue;
+    var minDate = getTodayIsoDate();
+    var inputs = document.querySelectorAll('.challenge-date-input');
+
+    inputs.forEach(function(input) {
+        input.min = minDate;
+        if (clearValue) input.value = '';
+    });
+}
+
 // ----------------------------------------------------------
 // Reset challenge creation UI back to initial state
 // ----------------------------------------------------------
@@ -18,8 +38,7 @@ function resetChallengeState() {
     if (step1) step1.style.display = '';
     if (step2) step2.style.display = 'none';
 
-    const dateInput = document.getElementById('challenge-date-input');
-    if (dateInput) dateInput.value = '';
+    syncChallengeDateInputs({ clearValue: true });
 
 
 
@@ -61,6 +80,7 @@ function showStep1() {
     if (step1) step1.style.display = '';
     if (step2) step2.style.display = 'none';
     if (activeDisplay) activeDisplay.innerHTML = '';
+    syncChallengeDateInputs({ clearValue: true });
 
     // Set challenged player name from selection
     if (window.selectedPlayerData) {
@@ -142,16 +162,10 @@ function openNativeDatePicker(input) {
 // Date picker - cross-browser
 // ----------------------------------------------------------
 function openChallengeDatePicker() {
-    var input = document.getElementById('challenge-date-input');
+    var input = document.getElementById('challenge-date-input-change') || document.getElementById('challenge-date-input');
     if (!input) return;
 
-    // Set min date to today
-    var today = new Date();
-    var yyyy = today.getFullYear();
-    var mm = String(today.getMonth() + 1).padStart(2, '0');
-    var dd = String(today.getDate()).padStart(2, '0');
-    input.min = yyyy + '-' + mm + '-' + dd;
-    input.value = '';
+    input.min = getTodayIsoDate();
 
     openNativeDatePicker(input);
 }
@@ -163,6 +177,12 @@ function changeChallengeDatePicker() {
 function onChallengeDateSelected(value) {
     if (!value) return;
     selectedChallengeDate = value;
+
+    var changeInput = document.getElementById('challenge-date-input-change');
+    if (changeInput) {
+        changeInput.min = getTodayIsoDate();
+        changeInput.value = value;
+    }
 
     // Format DD.MM.YYYY
     var parts = value.split('-');
@@ -301,8 +321,10 @@ function buildChallengeHTML(ch) {
                     '<span>' + dateStr + '</span>' +
                     '<img src="/static/images/calendar.svg" alt="Kalender" class="challenge-btn-icon">' +
                 '</div>' +
-                '<button class="challenge-btn challenge-btn-light" onclick="changePendingDate(' + ch.challenge_id + ')">DATUM \u00c4NDERN</button>' +
-                '<input type="date" id="pending-date-input-' + ch.challenge_id + '" class="hidden-date-input" onchange="onPendingDateChanged(' + ch.challenge_id + ', this.value)">' +
+                '<label class="challenge-btn challenge-btn-light challenge-date-trigger">' +
+                    '<span>DATUM \u00c4NDERN</span>' +
+                    '<input type="date" id="pending-date-input-' + ch.challenge_id + '" class="date-picker-overlay" min="' + getTodayIsoDate() + '" onchange="onPendingDateChanged(' + ch.challenge_id + ', this.value)">' +
+                '</label>' +
                 '<button class="challenge-btn challenge-btn-cancel" onclick="withdrawChallenge(' + ch.challenge_id + ')">HERAUSFORDERUNG ZUR\u00dcCKZIEHEN</button>' +
                 '<div class="challenge-info-block">' +
                     '<div class="challenge-info-row">' +
@@ -428,8 +450,7 @@ function formatResultForUser(result, role) {
 function changePendingDate(challengeId) {
     var input = document.getElementById('pending-date-input-' + challengeId);
     if (!input) return;
-    var today = new Date();
-    input.min = today.toISOString().split('T')[0];
+    input.min = getTodayIsoDate();
     openNativeDatePicker(input);
 }
 
@@ -617,5 +638,6 @@ function fallbackCopyInline(email, onSuccess) {
 // Init
 // ----------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function() {
+    syncChallengeDateInputs({ clearValue: true });
     loadMyChallenges();
 });

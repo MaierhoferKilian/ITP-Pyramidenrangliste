@@ -143,13 +143,12 @@
                 <!-- Step 1: Ask to challenge (Bild1) -->
                 <div id="challenge-step1">
                     <p class="challenge-description" id="challenge-question">Möchtest du <span id="challenged-player-name">xxx</span> zu einem Spiel herausfordern?</p>
-                    <button class="challenge-btn challenge-btn-light" onclick="openChallengeDatePicker()">
+                    <label class="challenge-btn challenge-btn-light challenge-date-trigger">
                         <span>JA - SPIELZEITPUNKT WÄHLEN</span>
                         <img src="{{ url_for('static', filename='images/calendar-dark.svg') }}" alt="Kalender" class="challenge-btn-icon">
-                    </button>
+                        <input type="date" id="challenge-date-input" class="date-picker-overlay challenge-date-input" onchange="onChallengeDateSelected(this.value)">
+                    </label>
                     <button class="challenge-btn challenge-btn-cancel" onclick="cancelChallenge()">VORGANG ABBRECHEN</button>
-                    <!-- Hidden date input for cross-browser compatibility -->
-                    <input type="date" id="challenge-date-input" class="hidden-date-input" onchange="onChallengeDateSelected(this.value)">
                 </div>
                 <!-- Step 2: Date selected, confirm (Bild2) -->
                 <div id="challenge-step2" style="display: none;">
@@ -158,7 +157,10 @@
                         <span id="challenge-selected-date">--.--.----</span>
                         <img src="{{ url_for('static', filename='images/calendar.svg') }}" alt="Kalender" class="challenge-btn-icon">
                     </div>
-                    <button class="challenge-btn challenge-btn-light" onclick="changeChallengeDatePicker()">DATUM ÄNDERN</button>
+                    <label class="challenge-btn challenge-btn-light challenge-date-trigger">
+                        <span>DATUM ÄNDERN</span>
+                        <input type="date" id="challenge-date-input-change" class="date-picker-overlay challenge-date-input" onchange="onChallengeDateSelected(this.value)">
+                    </label>
                     <button class="challenge-btn challenge-btn-light" onclick="submitNewChallenge()">HERAUSFORDERUNG ERSTELLEN</button>
                     <button class="challenge-btn challenge-btn-cancel" onclick="cancelChallenge()">VORGANG ABBRECHEN</button>
                 </div>
@@ -244,7 +246,7 @@
         const ACTIVE_CHALLENGE_OPPONENT_RANK = {% if active_challenge_opponent_rank %}{{ active_challenge_opponent_rank }}{% else %}null{% endif %};
         const ADMIN_EMAIL = '{{ admin_email|default("admin@example.com") }}';
     </script>
-    <script src="{{ url_for('static', filename='js/challengeHandling.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/challengeHandling.js', v='20260408-2') }}"></script>
     <script src="{{ url_for('static', filename='js/pinchzoompanPyramid.js') }}"></script>
     <script src="{{ url_for('static', filename='js/changeSidemenuContent.js') }}"></script>
     <script src="{{ url_for('static', filename='js/userExitHandling.js') }}"></script>
