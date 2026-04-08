@@ -333,10 +333,6 @@ main{
     outline: none;
     transition: background 0.2s ease;
 }
-.challenge-date-trigger {
-    position: relative;
-    overflow: hidden;
-}
 .challenge-btn-light {
     background: var(--bg-color);
     color: var(--fg-color);

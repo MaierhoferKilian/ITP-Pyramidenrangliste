@@ -7,6 +7,7 @@
 // ============================================================
 
 let selectedChallengeDate = null; // YYYY-MM-DD
+let challengeDatePickerOpenedAt = 0;
 
 function getTodayIsoDate() {
     var today = new Date();
@@ -162,10 +163,12 @@ function openNativeDatePicker(input) {
 // Date picker - cross-browser
 // ----------------------------------------------------------
 function openChallengeDatePicker() {
-    var input = document.getElementById('challenge-date-input-change') || document.getElementById('challenge-date-input');
+    var input = document.getElementById('challenge-date-input');
     if (!input) return;
 
     input.min = getTodayIsoDate();
+    input.value = selectedChallengeDate || '';
+    challengeDatePickerOpenedAt = Date.now();
 
     openNativeDatePicker(input);
 }
@@ -176,13 +179,17 @@ function changeChallengeDatePicker() {
 
 function onChallengeDateSelected(value) {
     if (!value) return;
-    selectedChallengeDate = value;
 
-    var changeInput = document.getElementById('challenge-date-input-change');
-    if (changeInput) {
-        changeInput.min = getTodayIsoDate();
-        changeInput.value = value;
+    var openedAgo = Date.now() - challengeDatePickerOpenedAt;
+    // iOS Safari can auto-commit today's date immediately on first open.
+    // Ignore this very fast auto-change and keep the user on step 1.
+    if (selectedChallengeDate === null && value === getTodayIsoDate() && openedAgo >= 0 && openedAgo < 800) {
+        var firstInput = document.getElementById('challenge-date-input');
+        if (firstInput) firstInput.value = '';
+        return;
     }
+
+    selectedChallengeDate = value;
 
     // Format DD.MM.YYYY
     var parts = value.split('-');
@@ -321,10 +328,8 @@ function buildChallengeHTML(ch) {
                     '<span>' + dateStr + '</span>' +
                     '<img src="/static/images/calendar.svg" alt="Kalender" class="challenge-btn-icon">' +
                 '</div>' +
-                '<label class="challenge-btn challenge-btn-light challenge-date-trigger">' +
-                    '<span>DATUM \u00c4NDERN</span>' +
-                    '<input type="date" id="pending-date-input-' + ch.challenge_id + '" class="date-picker-overlay" min="' + getTodayIsoDate() + '" onchange="onPendingDateChanged(' + ch.challenge_id + ', this.value)">' +
-                '</label>' +
+                '<button class="challenge-btn challenge-btn-light" onclick="changePendingDate(' + ch.challenge_id + ')">DATUM \u00c4NDERN</button>' +
+                '<input type="date" id="pending-date-input-' + ch.challenge_id + '" class="hidden-date-input" onchange="onPendingDateChanged(' + ch.challenge_id + ', this.value)">' +
                 '<button class="challenge-btn challenge-btn-cancel" onclick="withdrawChallenge(' + ch.challenge_id + ')">HERAUSFORDERUNG ZUR\u00dcCKZIEHEN</button>' +
                 '<div class="challenge-info-block">' +
                     '<div class="challenge-info-row">' +
