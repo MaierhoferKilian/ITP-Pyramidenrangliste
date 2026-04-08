@@ -16,18 +16,6 @@ function getTodayIsoDate() {
     return yyyy + '-' + mm + '-' + dd;
 }
 
-function isIOSDevice() {
-    var ua = navigator.userAgent || '';
-    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-function hideChallengeDateInputsForIOS() {
-    var inputs = document.querySelectorAll('.challenge-date-input');
-    inputs.forEach(function(input) {
-        input.classList.remove('ios-date-input-visible');
-    });
-}
-
 function syncChallengeDateInputs(options) {
     var opts = options || {};
     var clearValue = !!opts.clearValue;
@@ -37,7 +25,6 @@ function syncChallengeDateInputs(options) {
     inputs.forEach(function(input) {
         input.min = minDate;
         if (clearValue) input.value = '';
-        if (clearValue) input.classList.remove('ios-date-input-visible');
     });
 }
 
@@ -110,64 +97,24 @@ function showStep1() {
 function openNativeDatePicker(input) {
     if (!input) return;
 
-    // iOS Safari often blocks programmatic clicks on fully hidden date inputs.
-    // Temporarily place the input on-screen (nearly invisible), then restore.
-    var ua = navigator.userAgent || '';
-    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    var restoreStyles = null;
-    var restored = false;
-
-    if (isIOS) {
-        var previous = {
-            position: input.style.position,
-            left: input.style.left,
-            bottom: input.style.bottom,
-            width: input.style.width,
-            height: input.style.height,
-            opacity: input.style.opacity,
-            pointerEvents: input.style.pointerEvents,
-            zIndex: input.style.zIndex
-        };
-
-        input.style.position = 'fixed';
-        input.style.left = '0';
-        input.style.bottom = '0';
-        input.style.width = '100vw';
-        input.style.height = '44px';
-        input.style.opacity = '0.01';
-        input.style.pointerEvents = 'auto';
-        input.style.zIndex = '2147483647';
-
-        restoreStyles = function() {
-            if (restored) return;
-            restored = true;
-            input.style.position = previous.position;
-            input.style.left = previous.left;
-            input.style.bottom = previous.bottom;
-            input.style.width = previous.width;
-            input.style.height = previous.height;
-            input.style.opacity = previous.opacity;
-            input.style.pointerEvents = previous.pointerEvents;
-            input.style.zIndex = previous.zIndex;
-        };
+    // Keep this flow simple: button click -> focus/click date input.
+    try {
+        input.focus({ preventScroll: true });
+    } catch (e) {
+        input.focus();
     }
 
     try {
         if (typeof input.showPicker === 'function') {
             input.showPicker();
-        } else {
-            input.focus();
-            input.click();
+            return;
         }
-    } catch (e) {
-        input.focus();
-        input.click();
-    }
+    } catch (e) { }
 
-    if (restoreStyles) {
-        input.addEventListener('change', restoreStyles, { once: true });
-        input.addEventListener('blur', restoreStyles, { once: true });
-        setTimeout(restoreStyles, 1200);
+    try {
+        input.click();
+    } catch (e) {
+        // No-op fallback
     }
 }
 
@@ -175,21 +122,11 @@ function openNativeDatePicker(input) {
 // Date picker - cross-browser
 // ----------------------------------------------------------
 function openChallengeDatePicker() {
-    var step2 = document.getElementById('challenge-step2');
-    var isStep2Visible = !!step2 && window.getComputedStyle(step2).display !== 'none';
-    var input = isStep2Visible
-        ? document.getElementById('challenge-date-input-change')
-        : document.getElementById('challenge-date-input');
+    var input = document.getElementById('challenge-date-input');
     if (!input) return;
 
     input.min = getTodayIsoDate();
     input.value = selectedChallengeDate || '';
-
-    if (isIOSDevice()) {
-        hideChallengeDateInputsForIOS();
-        input.classList.add('ios-date-input-visible');
-        return;
-    }
 
     openNativeDatePicker(input);
 }
@@ -202,17 +139,11 @@ function onChallengeDateSelected(value) {
     if (!value) return;
 
     selectedChallengeDate = value;
-    hideChallengeDateInputsForIOS();
 
-    var step1Input = document.getElementById('challenge-date-input');
-    if (step1Input) {
-        step1Input.min = getTodayIsoDate();
-        step1Input.value = value;
-    }
-    var step2Input = document.getElementById('challenge-date-input-change');
-    if (step2Input) {
-        step2Input.min = getTodayIsoDate();
-        step2Input.value = value;
+    var input = document.getElementById('challenge-date-input');
+    if (input) {
+        input.min = getTodayIsoDate();
+        input.value = value;
     }
 
     // Format DD.MM.YYYY
