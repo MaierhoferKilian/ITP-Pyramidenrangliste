@@ -387,6 +387,25 @@ main{
     pointer-events: none;
     -webkit-appearance: none;
 }
+.hidden-date-input.ios-date-input-visible {
+    position: static;
+    opacity: 1;
+    width: 100%;
+    height: 3rem;
+    pointer-events: auto;
+    padding: 0 calc(var(--space) / 2);
+    margin-bottom: calc(var(--space) * 0.6);
+    border: 4px solid var(--fg-color);
+    border-radius: 0;
+    background: var(--bg-color);
+    color: var(--fg-color);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+}
 .challenge-info-block {
     margin-top: calc(var(--space) * 0.8);
     margin-bottom: calc(var(--space) * 0.4);

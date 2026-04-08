@@ -7,7 +7,6 @@
 // ============================================================
 
 let selectedChallengeDate = null; // YYYY-MM-DD
-let challengeDatePickerOpenedAt = 0;
 
 function getTodayIsoDate() {
     var today = new Date();
@@ -15,6 +14,18 @@ function getTodayIsoDate() {
     var mm = String(today.getMonth() + 1).padStart(2, '0');
     var dd = String(today.getDate()).padStart(2, '0');
     return yyyy + '-' + mm + '-' + dd;
+}
+
+function isIOSDevice() {
+    var ua = navigator.userAgent || '';
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function hideChallengeDateInputsForIOS() {
+    var inputs = document.querySelectorAll('.challenge-date-input');
+    inputs.forEach(function(input) {
+        input.classList.remove('ios-date-input-visible');
+    });
 }
 
 function syncChallengeDateInputs(options) {
@@ -26,6 +37,7 @@ function syncChallengeDateInputs(options) {
     inputs.forEach(function(input) {
         input.min = minDate;
         if (clearValue) input.value = '';
+        if (clearValue) input.classList.remove('ios-date-input-visible');
     });
 }
 
@@ -163,12 +175,21 @@ function openNativeDatePicker(input) {
 // Date picker - cross-browser
 // ----------------------------------------------------------
 function openChallengeDatePicker() {
-    var input = document.getElementById('challenge-date-input');
+    var step2 = document.getElementById('challenge-step2');
+    var isStep2Visible = !!step2 && window.getComputedStyle(step2).display !== 'none';
+    var input = isStep2Visible
+        ? document.getElementById('challenge-date-input-change')
+        : document.getElementById('challenge-date-input');
     if (!input) return;
 
     input.min = getTodayIsoDate();
     input.value = selectedChallengeDate || '';
-    challengeDatePickerOpenedAt = Date.now();
+
+    if (isIOSDevice()) {
+        hideChallengeDateInputsForIOS();
+        input.classList.add('ios-date-input-visible');
+        return;
+    }
 
     openNativeDatePicker(input);
 }
@@ -180,16 +201,19 @@ function changeChallengeDatePicker() {
 function onChallengeDateSelected(value) {
     if (!value) return;
 
-    var openedAgo = Date.now() - challengeDatePickerOpenedAt;
-    // iOS Safari can auto-commit today's date immediately on first open.
-    // Ignore this very fast auto-change and keep the user on step 1.
-    if (selectedChallengeDate === null && value === getTodayIsoDate() && openedAgo >= 0 && openedAgo < 800) {
-        var firstInput = document.getElementById('challenge-date-input');
-        if (firstInput) firstInput.value = '';
-        return;
-    }
-
     selectedChallengeDate = value;
+    hideChallengeDateInputsForIOS();
+
+    var step1Input = document.getElementById('challenge-date-input');
+    if (step1Input) {
+        step1Input.min = getTodayIsoDate();
+        step1Input.value = value;
+    }
+    var step2Input = document.getElementById('challenge-date-input-change');
+    if (step2Input) {
+        step2Input.min = getTodayIsoDate();
+        step2Input.value = value;
+    }
 
     // Format DD.MM.YYYY
     var parts = value.split('-');
