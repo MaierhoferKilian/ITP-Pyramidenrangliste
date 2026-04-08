@@ -97,7 +97,47 @@ function showStep1() {
 function openNativeDatePicker(input) {
     if (!input) return;
 
-    // Keep this flow simple: button click -> focus/click date input.
+    // Keep one hidden input but make it temporarily interactable for iOS.
+    var previous = {
+        position: input.style.position,
+        left: input.style.left,
+        top: input.style.top,
+        bottom: input.style.bottom,
+        width: input.style.width,
+        height: input.style.height,
+        opacity: input.style.opacity,
+        pointerEvents: input.style.pointerEvents,
+        zIndex: input.style.zIndex
+    };
+
+    var restored = false;
+    function restoreStyles() {
+        if (restored) return;
+        restored = true;
+        input.style.position = previous.position;
+        input.style.left = previous.left;
+        input.style.top = previous.top;
+        input.style.bottom = previous.bottom;
+        input.style.width = previous.width;
+        input.style.height = previous.height;
+        input.style.opacity = previous.opacity;
+        input.style.pointerEvents = previous.pointerEvents;
+        input.style.zIndex = previous.zIndex;
+    }
+
+    input.style.position = 'fixed';
+    input.style.left = '0';
+    input.style.top = '0';
+    input.style.width = '100vw';
+    input.style.height = '100vh';
+    input.style.opacity = '0.001';
+    input.style.pointerEvents = 'auto';
+    input.style.zIndex = '2147483647';
+
+    input.addEventListener('change', restoreStyles, { once: true });
+    input.addEventListener('input', restoreStyles, { once: true });
+    setTimeout(restoreStyles, 8000);
+
     try {
         input.focus({ preventScroll: true });
     } catch (e) {
@@ -113,9 +153,7 @@ function openNativeDatePicker(input) {
 
     try {
         input.click();
-    } catch (e) {
-        // No-op fallback
-    }
+    } catch (e) { }
 }
 
 // ----------------------------------------------------------
