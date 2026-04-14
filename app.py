@@ -14,6 +14,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.middleware.proxy_fix import ProxyFix
 from urllib.parse import quote
+from functools import wraps
+import re
 import enum
 from datetime import datetime, timedelta
 
@@ -24,6 +26,9 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 db = SQLAlchemy(app)
+
+ADMIN_EMAIL_REGEX = re.compile(r"^[a-z]{2}@htlwy\.at$")
+EXPLICIT_ADMIN_EMAILS = {"kilian.maierhofer@htlwy.at"}
 
 # Initialize Flask-Migrate
 migrate = Migrate(app, db)
@@ -376,6 +381,50 @@ def get_next_available_date(start_date):
     
     return current_date
 
+def get_current_player():
+    user = session.get("user")
+    if not user:
+        return None
+    return Player.query.filter_by(uid=user.get("oid")).first()
+
+def is_admin_player(player):
+    if not player or not player.email:
+        return False
+    email = player.email.strip().lower()
+    return email in EXPLICIT_ADMIN_EMAILS or bool(ADMIN_EMAIL_REGEX.fullmatch(email))
+
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not session.get("user"):
+            return jsonify({"error": "Not logged in"}), 401
+
+        current_player = get_current_player()
+        if not current_player:
+            return jsonify({"error": "Player not found"}), 404
+
+        if not is_admin_player(current_player):
+            return jsonify({"error": "Forbidden"}), 403
+
+        return fn(*args, **kwargs)
+    return wrapper
+
+def remove_player_from_ranking(player):
+    if not player or not player.in_ranking or player.current_rank is None:
+        return
+
+    leaving_rank = player.current_rank
+    player.current_rank = None
+    player.in_ranking = False
+
+    players_to_update = Player.query.filter(
+        Player.current_rank > leaving_rank,
+        Player.in_ranking == True
+    ).all()
+
+    for p in players_to_update:
+        p.current_rank -= 1
+
 # Routes
 @app.route("/")
 def index():
@@ -387,6 +436,7 @@ def index():
     check_expired_challenges()
     
     current_player = Player.query.filter_by(uid=session["user"]["oid"]).first()
+    is_admin = is_admin_player(current_player)
     
     # Check for active challenges
     has_active_challenge = False
@@ -412,7 +462,184 @@ def index():
                            current_player=current_player, 
                            total_players=total_players, 
                            has_active_challenge=has_active_challenge,
-                           active_challenge_opponent_rank=active_challenge_opponent_rank)
+                           active_challenge_opponent_rank=active_challenge_opponent_rank,
+                           is_admin=is_admin)
+
+@app.route("/admin")
+def admin_page():
+    if not session.get("user"):
+        return redirect(url_for("login"))
+
+    current_player = get_current_player()
+    if not current_player:
+        return redirect(url_for("login"))
+
+    if not is_admin_player(current_player):
+        return redirect(url_for("index"))
+
+    return render_template("admin.html", current_player=current_player)
+
+@app.route("/admin/active_challenges", methods=["GET"])
+@admin_required
+def admin_active_challenges():
+    active_challenges = Challenge.query.filter(
+        Challenge.status.in_([StatusEnum.pending, StatusEnum.accepted])
+    ).order_by(Challenge.challenge_id.desc()).all()
+
+    data = []
+    for ch in active_challenges:
+        challenger = Player.query.filter_by(uid=ch.FK_challenger_id).first()
+        challenged = Player.query.filter_by(uid=ch.FK_challenged_id).first()
+        match = Match.query.filter_by(FK_challenge_id=ch.challenge_id).first()
+
+        display_date = None
+        if match and match.match_date:
+            display_date = match.match_date
+        elif ch.proposed_date:
+            display_date = ch.proposed_date
+
+        data.append({
+            "challenge_id": ch.challenge_id,
+            "status": ch.status.value,
+            "challenger_name": f"{challenger.firstname} {challenger.lastname}" if challenger else "Unbekannt",
+            "challenger_email": challenger.email if challenger else "",
+            "challenged_name": f"{challenged.firstname} {challenged.lastname}" if challenged else "Unbekannt",
+            "challenged_email": challenged.email if challenged else "",
+            "challenge_date": ch.challenge_date.strftime("%d.%m.%Y") if ch.challenge_date else "",
+            "deadline_date": ch.deadline_date.strftime("%d.%m.%Y") if ch.deadline_date else "",
+            "match_date": display_date.strftime("%d.%m.%Y") if display_date else ""
+        })
+
+    return jsonify({"challenges": data})
+
+@app.route("/admin/delete_challenge", methods=["POST"])
+@admin_required
+def admin_delete_challenge():
+    try:
+        data = request.get_json() or {}
+        challenge_id = data.get("challenge_id")
+
+        if not challenge_id:
+            return jsonify({"error": "No challenge ID specified"}), 400
+
+        challenge = Challenge.query.filter_by(challenge_id=challenge_id).first()
+        if not challenge:
+            return jsonify({"error": "Challenge not found"}), 404
+
+        if challenge.status not in [StatusEnum.pending, StatusEnum.accepted]:
+            return jsonify({"error": "Can only delete active challenges"}), 400
+
+        associated_match = Match.query.filter_by(FK_challenge_id=challenge.challenge_id).first()
+        if associated_match:
+            db.session.delete(associated_match)
+
+        associated_notifications = Notification.query.filter_by(FK_challenge_id=challenge.challenge_id).all()
+        for notif in associated_notifications:
+            db.session.delete(notif)
+
+        db.session.delete(challenge)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Herausforderung gelöscht"})
+    except Exception as e:
+        print(f"Error deleting challenge as admin: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Löschen der Herausforderung"}), 500
+
+@app.route("/admin/blocked_players", methods=["GET"])
+@admin_required
+def admin_blocked_players():
+    now = datetime.utcnow()
+
+    blocked_players = Player.query.filter(
+        Player.blocked_until.isnot(None),
+        Player.blocked_until > now
+    ).order_by(Player.blocked_until.desc()).all()
+
+    all_players = Player.query.order_by(Player.firstname.asc(), Player.lastname.asc()).all()
+
+    blocked_data = []
+    for p in blocked_players:
+        blocked_data.append({
+            "uid": p.uid,
+            "name": f"{p.firstname} {p.lastname}",
+            "email": p.email,
+            "blocked_until": p.blocked_until.strftime("%d.%m.%Y %H:%M") if p.blocked_until else ""
+        })
+
+    all_players_data = []
+    for p in all_players:
+        all_players_data.append({
+            "uid": p.uid,
+            "name": f"{p.firstname} {p.lastname}",
+            "email": p.email,
+            "in_ranking": p.in_ranking
+        })
+
+    return jsonify({"blocked_players": blocked_data, "players": all_players_data})
+
+@app.route("/admin/unblock_player", methods=["POST"])
+@admin_required
+def admin_unblock_player():
+    try:
+        data = request.get_json() or {}
+        player_uid = data.get("player_uid")
+
+        if not player_uid:
+            return jsonify({"error": "No player specified"}), 400
+
+        player = Player.query.filter_by(uid=player_uid).first()
+        if not player:
+            return jsonify({"error": "Player not found"}), 404
+
+        player.blocked_until = None
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Spielersperre aufgehoben"})
+    except Exception as e:
+        print(f"Error unblocking player as admin: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Aufheben der Sperre"}), 500
+
+@app.route("/admin/block_player", methods=["POST"])
+@admin_required
+def admin_block_player():
+    try:
+        data = request.get_json() or {}
+        player_uid = data.get("player_uid")
+        blocked_until = data.get("blocked_until")
+
+        if not player_uid or not blocked_until:
+            return jsonify({"error": "Missing player or blocked-until date"}), 400
+
+        player = Player.query.filter_by(uid=player_uid).first()
+        if not player:
+            return jsonify({"error": "Player not found"}), 404
+
+        try:
+            blocked_until_date = datetime.strptime(blocked_until, "%Y-%m-%d")
+            blocked_until_dt = blocked_until_date.replace(hour=23, minute=59, second=59)
+        except ValueError:
+            return jsonify({"error": "Ungültiges Datumsformat"}), 400
+
+        if blocked_until_dt <= datetime.utcnow():
+            return jsonify({"error": "Sperrdatum muss in der Zukunft liegen"}), 400
+
+        player.blocked_until = blocked_until_dt
+
+        if player.in_ranking:
+            remove_player_from_ranking(player)
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Spielersperre gesetzt"
+        })
+    except Exception as e:
+        print(f"Error blocking player as admin: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Fehler beim Sperren des Spielers"}), 500
 
 @app.route("/selected_player", methods=["POST"])
 def selected_player():

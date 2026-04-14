@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <img src="{{ url_for('static', filename='images/htlwy_logo.svg') }}" alt="HTLWY Logo">
+    <h1>ADMIN BEREICH</h1>
+</header>
+
+<main class="admin-main">
+    <div class="admin-layout">
+        <div class="admin-panel">
+            <div class="headline-container">
+                <h2>AKTIVE HERAUSFORDERUNGEN</h2>
+            </div>
+            <div class="rules-container" id="admin-challenges-container">
+                <p>Lade Daten...</p>
+            </div>
+            <div class="bottom-fade"></div>
+        </div>
+
+        <div class="admin-panel">
+            <div class="headline-container">
+                <h2>SPIELERSPERREN</h2>
+            </div>
+            <div class="rules-container admin-blocking-container">
+                <h4>SPERRE VERGEBEN</h4>
+                <label class="admin-field-label" for="admin-player-select">Spieler</label>
+                <select id="admin-player-select" class="admin-select"></select>
+
+                <label class="admin-field-label" for="admin-block-until">Gesperrt bis</label>
+                <input id="admin-block-until" class="admin-date-input" type="date">
+
+                <button class="challenge-btn challenge-btn-light" onclick="adminBlockPlayer()">SPERRE VERGEBEN</button>
+
+                <h4 style="margin-top: var(--space);">AKTIVE SPERREN</h4>
+                <div id="admin-blocked-list">
+                    <p>Keine aktiven Sperren.</p>
+                </div>
+
+                <div class="admin-actions-row">
+                    <a class="admin-back-link" href="{{ url_for('index') }}">ZURÜCK ZUR RANGLISTE</a>
+                </div>
+            </div>
+            <div class="bottom-fade"></div>
+        </div>
+    </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/adminHandling.js') }}"></script>
+{% endblock %}

@@ -132,6 +132,16 @@
                     </svg>
                   </div>
                 </div>
+                                {% if is_admin %}
+                                <div class="option-container" onclick='window.location.href="{{ url_for("admin_page") }}"'>
+                                    <h4>ADMIN BEREICH</h4>
+                                    <div class="user-button">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9.22353 8L15.9059 8.09412M15.9059 8.09412L16 14.7765M15.9059 8.09412L8 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                {% endif %}
             </div>
         </div>
         <div id="sm-challenge" style="display: none;" class="side-menu">
